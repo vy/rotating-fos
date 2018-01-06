@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.vlkan.rfos</groupId>
     <artifactId>rotating-fos</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1</version>
 
     <name>RotatingFileOutputStream</name>
     <description>Sneakily rotating your FileOutputStream since 2017.</description>
@@ -40,7 +38,7 @@
         <url>http://github.com/vy/rotating-fos</url>
         <connection>scm:git:git@github.com:vy/rotating-fos.git</connection>
         <developerConnection>scm:git:git@github.com:vy/rotating-fos.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>v0.1</tag>
     </scm>
 
     <distributionManagement>
