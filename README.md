@@ -8,6 +8,16 @@ policies similar to [Log4j](https://logging.apache.org/log4j/) or
 
 # Usage
 
+You first need to include `rotating-fos` in your Maven/Gradle dependencies:
+
+```xml
+<dependency>
+    <groupId>com.vlkan.rfos</groupId>
+    <artifactId>rotating-fos</artifactId>
+    <version>${rotating-fos.version}</version>
+</dependency>
+```
+
 `RotatingFileOutputStream` does not extend `java.io.FileOutputStream` (as a
 deliberate design decision, see [How (not) to extend standard collection
 classes](https://javachannel.org/posts/how-not-to-extend-standard-collection-classes/)),
