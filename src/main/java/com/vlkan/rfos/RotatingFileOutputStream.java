@@ -90,7 +90,10 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
         // Re-open the file.
         LOGGER.debug("re-opening file {file={}}", config.getFile());
-        stream = open();
+        FileOutputStream newStream = open();
+        FileOutputStream oldStream = stream;
+        stream = newStream;
+        oldStream.close();
 
         // Compress the old file, if necessary.
         if (config.isCompress()) {
