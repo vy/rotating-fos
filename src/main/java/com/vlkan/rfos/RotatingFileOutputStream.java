@@ -13,50 +13,46 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.Timer;
 import java.util.zip.GZIPOutputStream;
 
 public class RotatingFileOutputStream extends OutputStream implements Rotatable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RotatingFileOutputStream.class);
 
-    private final Builder builder;
+    private final RotatingFileOutputStreamConfig config;
 
     private final List<Thread> runningThreads;
 
     private volatile FileOutputStream stream;
 
-    private RotatingFileOutputStream(Builder builder) {
-        this.builder = builder;
+    public RotatingFileOutputStream(RotatingFileOutputStreamConfig config) {
+        this.config = config;
         this.runningThreads = Collections.synchronizedList(new LinkedList<Thread>());
         this.stream = open();
-        startPolicies(builder);
+        startPolicies();
     }
 
-    private void startPolicies(Builder builder) {
+    private void startPolicies() {
         RotationPolicyContext policyContext = RotationPolicyContext
                 .builder()
-                .clock(builder.clock)
-                .file(builder.file)
-                .timer(builder.timer)
+                .clock(config.getClock())
+                .file(config.getFile())
+                .timer(config.getTimer())
                 .rotatable(this)
-                .callback(builder.callback)
+                .callback(config.getCallback())
                 .build();
-        for (RotationPolicy policy : builder.policies) {
+        for (RotationPolicy policy : config.getPolicies()) {
             policy.start(policyContext);
         }
     }
 
     private FileOutputStream open() {
         try {
-            return new FileOutputStream(builder.file, builder.append);
+            return new FileOutputStream(config.getFile(), config.isAppend());
         } catch (IOException error) {
-            String message = String.format("file open failure {file=%s}", builder.file);
+            String message = String.format("file open failure {file=%s}", config.getFile());
             throw new RuntimeException(message);
         }
     }
@@ -75,29 +71,29 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     private void unsafeRotate(RotationPolicy policy, LocalDateTime dateTime, RotationCallback callback) throws Exception {
 
         // Skip rotation if file is empty.
-        if (builder.file.length() == 0) {
+        if (config.getFile().length() == 0) {
             LOGGER.debug("empty file, skipping rotation {file={}}");
             callback.onSuccess(policy, dateTime, null);
             return;
         }
 
         // Rename the file.
-        File rotatedFile = builder.filePattern.create(dateTime).getAbsoluteFile();
-        LOGGER.debug("renaming {file={}, rotatedFile={}}", builder.file, rotatedFile);
-        boolean renamed = builder.file.renameTo(rotatedFile);
+        File rotatedFile = config.getFilePattern().create(dateTime).getAbsoluteFile();
+        LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
+        boolean renamed = config.getFile().renameTo(rotatedFile);
         if (!renamed) {
-            String message = String.format("rename failure {file=%s, rotatedFile=%s}", builder.file, rotatedFile);
+            String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
             IOException error = new IOException(message);
             callback.onFailure(policy, dateTime, rotatedFile, error);
             return;
         }
 
         // Re-open the file.
-        LOGGER.debug("re-opening file {file={}}", builder.file);
+        LOGGER.debug("re-opening file {file={}}", config.getFile());
         stream = open();
 
         // Compress the old file, if necessary.
-        if (builder.compress) {
+        if (config.isCompress()) {
             asyncCompress(policy, dateTime, rotatedFile, callback);
             return;
         }
@@ -162,6 +158,10 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
     }
 
+    public RotatingFileOutputStreamConfig getConfig() {
+        return config;
+    }
+
     public List<Thread> getRunningThreads() {
         return runningThreads;
     }
@@ -188,116 +188,8 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public void close() throws IOException {
-        builder.timer.cancel();
+        config.getTimer().cancel();
         stream.close();
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-
-        private File file;
-
-        private RotatingFilePattern filePattern;
-
-        private Timer timer;
-
-        private Set<RotationPolicy> policies;
-
-        private boolean append = true;
-
-        private boolean compress = false;
-
-        private Clock clock = SystemClock.getInstance();
-
-        private RotationCallback callback = LoggingRotationCallback.getInstance();
-
-        private Builder() {
-            // Do nothing.
-        }
-
-        public Builder file(File file) {
-            this.file = file;
-            return this;
-        }
-
-        public Builder file(String fileName) {
-            this.file = new File(fileName);
-            return this;
-        }
-
-        public Builder filePattern(RotatingFilePattern filePattern) {
-            this.filePattern = filePattern;
-            return this;
-        }
-
-        public Builder filePattern(String filePattern) {
-            this.filePattern = new RotatingFilePattern(filePattern);
-            return this;
-        }
-
-        public Builder timer(Timer timer) {
-            this.timer = timer;
-            return this;
-        }
-
-        public Builder policies(Set<RotationPolicy> policies) {
-            this.policies = policies;
-            return this;
-        }
-
-        public Builder policy(RotationPolicy policy) {
-            if (policies == null) {
-                policies = new LinkedHashSet<>();
-            }
-            policies.add(policy);
-            return this;
-        }
-
-        public Builder append(boolean append) {
-            this.append = append;
-            return this;
-        }
-
-        public Builder compress(boolean compress) {
-            this.compress = compress;
-            return this;
-        }
-
-        public Builder clock(Clock clock) {
-            this.clock = clock;
-            return this;
-        }
-
-        public Builder callback(RotationCallback callback) {
-            this.callback = callback;
-            return this;
-        }
-
-        public RotatingFileOutputStream build() {
-            prepare();
-            validate();
-            return new RotatingFileOutputStream(this);
-        }
-
-        private void prepare() {
-            if (timer == null) {
-                timer = new Timer();
-            }
-        }
-
-        private void validate() {
-            Objects.requireNonNull(file, "file");
-            Objects.requireNonNull(filePattern, "filePattern");
-            if (policies == null || policies.isEmpty()) {
-                throw new IllegalArgumentException("empty policies");
-            }
-            Objects.requireNonNull(clock, "clock");
-            Objects.requireNonNull(callback, "callback");
-        }
-
     }
 
 }

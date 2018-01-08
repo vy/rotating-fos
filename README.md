@@ -1,7 +1,7 @@
 [![Build Status](https://secure.travis-ci.org/vy/rotating-fos.svg)](http://travis-ci.org/vy/rotating-fos)
 [![Maven Central](https://img.shields.io/maven-central/v/com.vlkan.rfos/rotating-fos.svg)](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.vlkan.rfos%22)
 
-`rotating-fos` is a Java library providing `RotatingFileOutputStream` which
+`rotating-fos` is a Java 7 library providing `RotatingFileOutputStream` which
 internally rotates an underlying `FileOutputStream` using provided rotation
 policies similar to [Log4j](https://logging.apache.org/log4j/) or
 [Logback](https://logback.qos.ch/).
@@ -24,16 +24,20 @@ classes](https://javachannel.org/posts/how-not-to-extend-standard-collection-cla
 but `java.io.OutputStream`. Its basic usage is pretty straightforward:
 
 ```java
-RotatingFileOutputStream
+RotatingFileOutputStreamConfig config = RotatingFileOutputStreamConfig
         .builder()
         .file("/tmp/app.log")
         .filePattern("/tmp/app-%{yyyyMMdd-HHmmss.SSS}.log")
         .policy(new SizeBasedRotationPolicy(1000, 1024 * 1024 * 100))
         .policy(DailyRotationPolicy.getInstance())
         .build();
+
+try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
+    stream.writer("Hello, world!".getBytes(StandardCharsets.UTF_8))
+}
 ```
 
-`RotatingFileOutputStream.Builder` supports the following methods:
+`RotatingFileOutputStreamConfig.Builder` supports the following methods:
 
 | Method(s) | Default | Description |
 | --------- | ------- | ----------- |
@@ -43,17 +47,24 @@ RotatingFileOutputStream
 | `timer(Timer)` | `new Timer()` | timer to be used for scheduling policies |
 | `append(boolean)` | `true` | append while opening the `file` |
 | `compress(boolean)` | `false` | GZIP compression after rotation |
-| `clock(Clock)` | `SystemClock.getInstance()` | clock to be used for retrieving date and time |
-| `callback(RotationCallback)` | `LoggingRotationCallback.getInstance()` | rotation callback |
+| `clock(Clock)` | `SystemClock` | clock to be used for retrieving date and time |
+| `callback(RotationCallback)` | `LoggingRotationCallback` | rotation callback |
 
-Packaged rotation policies are listed below:
+Packaged rotation policies are listed below. (You can also create your own
+rotation policies by implementing `RotationPolicy` interface.)
 
 - `DailyRotationPolicy`
 - `WeeklyRotationPolicy`
 - `SizeBasedRotationPolicy`
 
-You can also create your own rotation policies by implementing
-`RotationPolicy` interface.
+Once you have a handle on `RotatingFileOutputStream`, in addition to standard
+`java.io.OutputStream` methods (e.g., `write()`, `close()`, etc.), it provides
+the following methods:
+
+| Method | Description |
+| --------- | ----------- |
+| `getConfig()` | used `RotatingFileOutputStreamConfig` |
+| `getRunningThreads()` | compression threads running in the background |
 
 # Caveats
 

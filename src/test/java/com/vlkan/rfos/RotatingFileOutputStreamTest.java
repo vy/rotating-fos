@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -119,7 +121,7 @@ public class RotatingFileOutputStreamTest {
         int checkIntervalMillis = 50;
         int maxByteCount = 1024;
         SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(checkIntervalMillis, maxByteCount);
-        RotatingFileOutputStream stream = RotatingFileOutputStream
+        RotatingFileOutputStreamConfig config = RotatingFileOutputStreamConfig
                 .builder()
                 .compress(compress)
                 .file(fileName)
@@ -128,6 +130,7 @@ public class RotatingFileOutputStreamTest {
                 .policy(policy)
                 .callback(callback)
                 .build();
+        RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
 
         // Allow timer to proceed.
         LOGGER.trace("pushing task execution permit");
