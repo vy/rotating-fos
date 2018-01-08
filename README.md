@@ -63,8 +63,8 @@ the following methods:
 
 | Method | Description |
 | --------- | ----------- |
-| `getConfig()` | used `RotatingFileOutputStreamConfig` |
-| `getRunningThreads()` | compression threads running in the background |
+| `RotatingFileOutputStreamConfig getConfig()` | used configuration |
+| `List<Thread> getRunningThreads()` | compression threads running in the background |
 
 # Caveats
 
