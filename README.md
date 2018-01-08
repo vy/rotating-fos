@@ -28,7 +28,7 @@ RotatingFileOutputStreamConfig config = RotatingFileOutputStreamConfig
         .builder()
         .file("/tmp/app.log")
         .filePattern("/tmp/app-%{yyyyMMdd-HHmmss.SSS}.log")
-        .policy(new SizeBasedRotationPolicy(1000, 1024 * 1024 * 100))
+        .policy(new SizeBasedRotationPolicy(5000 /* 5s */, 1024 * 1024 * 100 /* 100MB */))
         .policy(DailyRotationPolicy.getInstance())
         .build();
 
