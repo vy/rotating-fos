@@ -195,4 +195,9 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         stream.close();
     }
 
+    @Override
+    public String toString() {
+        return String.format("RotatingFileOutputStream{file=%s}", config.getFile());
+    }
+
 }

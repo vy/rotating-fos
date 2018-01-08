@@ -10,42 +10,88 @@ import java.util.Timer;
 
 public class RotatingFileOutputStreamConfig {
 
-    private final Builder builder;
+    private final File file;
+
+    private final RotatingFilePattern filePattern;
+
+    private final Timer timer;
+
+    private final Set<RotationPolicy> policies;
+
+    private final boolean append;
+
+    private final boolean compress;
+
+    private final Clock clock;
+
+    private final RotationCallback callback;
 
     private RotatingFileOutputStreamConfig(Builder builder) {
-        this.builder = builder;
+        this.file = builder.file;
+        this.filePattern = builder.filePattern;
+        this.timer = builder.timer;
+        this.policies = builder.policies;
+        this.append = builder.append;
+        this.compress = builder.compress;
+        this.clock = builder.clock;
+        this.callback = builder.callback;
     }
 
     public File getFile() {
-        return builder.file;
+        return file;
     }
 
     public RotatingFilePattern getFilePattern() {
-        return builder.filePattern;
+        return filePattern;
     }
 
     public Timer getTimer() {
-        return builder.timer;
+        return timer;
     }
 
     public Set<RotationPolicy> getPolicies() {
-        return builder.policies;
+        return policies;
     }
 
     public boolean isAppend() {
-        return builder.append;
+        return append;
     }
 
     public boolean isCompress() {
-        return builder.compress;
+        return compress;
     }
 
     public Clock getClock() {
-        return builder.clock;
+        return clock;
     }
 
     public RotationCallback getCallback() {
-        return builder.callback;
+        return callback;
+    }
+
+    @Override
+    public boolean equals(Object instance) {
+        if (this == instance) return true;
+        if (instance == null || getClass() != instance.getClass()) return false;
+        RotatingFileOutputStreamConfig that = (RotatingFileOutputStreamConfig) instance;
+        return append == that.append &&
+                compress == that.compress &&
+                Objects.equals(file, that.file) &&
+                Objects.equals(filePattern, that.filePattern) &&
+                Objects.equals(timer, that.timer) &&
+                Objects.equals(policies, that.policies) &&
+                Objects.equals(clock, that.clock) &&
+                Objects.equals(callback, that.callback);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(file, filePattern, timer, policies, append, compress, clock, callback);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("RotatingFileOutputStreamConfig{file=%s}", file);
     }
 
     public static Builder builder() {

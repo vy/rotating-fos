@@ -8,6 +8,7 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class RotatingFilePattern {
 
@@ -56,13 +57,21 @@ public class RotatingFilePattern {
 
     }
 
+    private final String pattern;
+
+    private final Locale locale;
+
     private final List<Field> fields;
 
     public RotatingFilePattern(String pattern) {
-        this.fields = readPattern(pattern, Locale.getDefault());
+        this.pattern = pattern;
+        this.locale = Locale.getDefault();
+        this.fields = readPattern(pattern, locale);
     }
 
     public RotatingFilePattern(String pattern, Locale locale) {
+        this.pattern = pattern;
+        this.locale = locale;
         this.fields = readPattern(pattern, locale);
     }
 
@@ -163,6 +172,33 @@ public class RotatingFilePattern {
         }
         String pathName = pathNameBuilder.toString();
         return new File(pathName);
+    }
+
+    public String getPattern() {
+        return pattern;
+    }
+
+    public Locale getLocale() {
+        return locale;
+    }
+
+    @Override
+    public boolean equals(Object instance) {
+        if (this == instance) return true;
+        if (instance == null || getClass() != instance.getClass()) return false;
+        RotatingFilePattern that = (RotatingFilePattern) instance;
+        return Objects.equals(pattern, that.pattern) &&
+                Objects.equals(locale, that.locale);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(pattern, locale);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("RotatingFilePattern{pattern=%s, locale=%s}", pattern, locale);
     }
 
 }

@@ -10,30 +10,59 @@ import java.util.Timer;
 
 public class RotationPolicyContext {
 
-    private final Builder builder;
+    private Clock clock;
+
+    private Timer timer;
+
+    private Rotatable rotatable;
+
+    private File file;
+
+    private RotationCallback callback;
 
     private RotationPolicyContext(Builder builder) {
-        this.builder = builder;
+        this.clock = builder.clock;
+        this.timer = builder.timer;
+        this.rotatable = builder.rotatable;
+        this.file = builder.file;
+        this.callback = builder.callback;
     }
 
     public Clock getClock() {
-        return builder.clock;
+        return clock;
     }
 
     public Timer getTimer() {
-        return builder.timer;
+        return timer;
     }
 
     public Rotatable getRotatable() {
-        return builder.rotatable;
+        return rotatable;
     }
 
     public File getFile() {
-        return builder.file;
+        return file;
     }
 
     public RotationCallback getCallback() {
-        return builder.callback;
+        return callback;
+    }
+
+    @Override
+    public boolean equals(Object instance) {
+        if (this == instance) return true;
+        if (instance == null || getClass() != instance.getClass()) return false;
+        RotationPolicyContext that = (RotationPolicyContext) instance;
+        return Objects.equals(clock, that.clock) &&
+                Objects.equals(timer, that.timer) &&
+                Objects.equals(rotatable, that.rotatable) &&
+                Objects.equals(file, that.file) &&
+                Objects.equals(callback, that.callback);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(clock, timer, rotatable, file, callback);
     }
 
     public static Builder builder() {
