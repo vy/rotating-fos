@@ -1,9 +1,10 @@
 package com.vlkan.rfos.policy;
 
 import com.vlkan.rfos.Clock;
-import com.vlkan.rfos.LoggingRotationCallback;
 import com.vlkan.rfos.Rotatable;
-import com.vlkan.rfos.RotationCallback;
+import com.vlkan.rfos.Rotatables;
+import com.vlkan.rfos.RotatingFileOutputStreamConfig;
+import com.vlkan.rfos.RotatingFilePattern;
 import org.joda.time.LocalDateTime;
 import org.junit.Test;
 
@@ -23,22 +24,6 @@ public class DailyRotationPolicyTest {
 
     @Test
     public void test() throws InterruptedException {
-
-        // Create a rotatable.
-        final BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
-        final BlockingQueue<String> rotationDateTimeTexts = new LinkedBlockingDeque<>(1);
-        Rotatable rotatable = new Rotatable() {
-            @Override
-            public void rotate(RotationPolicy policy, LocalDateTime dateTime, RotationCallback callback) {
-                try {
-                    rotationPolicies.put(policy);
-                    rotationDateTimeTexts.put(dateTime.toString());
-                    callback.onSuccess(policy, dateTime, new File("/no/such/file"));
-                } catch (InterruptedException ignored) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        };
 
         // Create a timer.
         final BlockingQueue<String> timerDateTimeTexts = new LinkedBlockingDeque<>();
@@ -65,18 +50,26 @@ public class DailyRotationPolicyTest {
         String midnight1Text = "2017-12-29T00:00:00.000";
         when(clock.midnight()).thenReturn(LocalDateTime.parse(midnight1Text));
 
-        // Start policy. (Will consume the 1st clock tick.)
+        // Create the config.
         DailyRotationPolicy policy = DailyRotationPolicy.getInstance();
         File file = mock(File.class);
-        RotationPolicyContext context = RotationPolicyContext
+        RotatingFilePattern filePattern = mock(RotatingFilePattern.class);
+        final RotatingFileOutputStreamConfig config = RotatingFileOutputStreamConfig
                 .builder()
                 .file(file)
+                .filePattern(filePattern)
                 .clock(clock)
-                .rotatable(rotatable)
                 .timer(timer)
-                .callback(LoggingRotationCallback.getInstance())
+                .policy(policy)
                 .build();
-        policy.start(context);
+
+        // Create a rotatable.
+        final BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
+        final BlockingQueue<String> rotationDateTimeTexts = new LinkedBlockingDeque<>(1);
+        Rotatable rotatable = Rotatables.createSpyingRotatable(config, rotationPolicies, rotationDateTimeTexts);
+
+        // Start policy. (Will consume the 1st clock tick.)
+        policy.start(rotatable);
 
         // Setup the 2nd clock tick. (Will be consumed when we start draining from blocking queues.)
         String midnight2Text = "2017-12-30T00:00:00.000";

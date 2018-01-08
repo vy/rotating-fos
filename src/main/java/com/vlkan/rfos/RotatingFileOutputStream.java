@@ -1,7 +1,6 @@
 package com.vlkan.rfos;
 
 import com.vlkan.rfos.policy.RotationPolicy;
-import com.vlkan.rfos.policy.RotationPolicyContext;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,16 +34,8 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     private void startPolicies() {
-        RotationPolicyContext policyContext = RotationPolicyContext
-                .builder()
-                .clock(config.getClock())
-                .file(config.getFile())
-                .timer(config.getTimer())
-                .rotatable(this)
-                .callback(config.getCallback())
-                .build();
         for (RotationPolicy policy : config.getPolicies()) {
-            policy.start(policyContext);
+            policy.start(this);
         }
     }
 
@@ -58,22 +49,22 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     @Override
-    public void rotate(RotationPolicy policy, LocalDateTime dateTime, RotationCallback callback) {
+    public void rotate(RotationPolicy policy, LocalDateTime dateTime) {
         try {
-            unsafeRotate(policy, dateTime, callback);
+            unsafeRotate(policy, dateTime);
         } catch (Exception error) {
             String message = String.format("rotation failure {dateTime=%s}", dateTime);
             RuntimeException extendedError = new RuntimeException(message);
-            callback.onFailure(policy, dateTime, null, extendedError);
+            config.getCallback().onFailure(policy, dateTime, null, extendedError);
         }
     }
 
-    private void unsafeRotate(RotationPolicy policy, LocalDateTime dateTime, RotationCallback callback) throws Exception {
+    private void unsafeRotate(RotationPolicy policy, LocalDateTime dateTime) throws Exception {
 
         // Skip rotation if file is empty.
         if (config.getFile().length() == 0) {
             LOGGER.debug("empty file, skipping rotation {file={}}");
-            callback.onSuccess(policy, dateTime, null);
+            config.getCallback().onSuccess(policy, dateTime, null);
             return;
         }
 
@@ -84,7 +75,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         if (!renamed) {
             String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
             IOException error = new IOException(message);
-            callback.onFailure(policy, dateTime, rotatedFile, error);
+            config.getCallback().onFailure(policy, dateTime, rotatedFile, error);
             return;
         }
 
@@ -97,12 +88,12 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
         // Compress the old file, if necessary.
         if (config.isCompress()) {
-            asyncCompress(policy, dateTime, rotatedFile, callback);
+            asyncCompress(policy, dateTime, rotatedFile, config.getCallback());
             return;
         }
 
         // So far, so good;
-        callback.onSuccess(policy, dateTime, rotatedFile);
+        config.getCallback().onSuccess(policy, dateTime, rotatedFile);
 
     }
 
@@ -161,6 +152,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
     }
 
+    @Override
     public RotatingFileOutputStreamConfig getConfig() {
         return config;
     }

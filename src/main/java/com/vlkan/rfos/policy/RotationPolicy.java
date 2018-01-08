@@ -1,7 +1,9 @@
 package com.vlkan.rfos.policy;
 
+import com.vlkan.rfos.Rotatable;
+
 public interface RotationPolicy {
 
-    void start(RotationPolicyContext context);
+    void start(Rotatable rotatable);
 
 }

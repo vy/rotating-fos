@@ -22,6 +22,11 @@ public class LoggingRotationCallback implements RotationCallback {
     }
 
     @Override
+    public void onTrigger(RotationPolicy policy, LocalDateTime dateTime) {
+        LOGGER.debug("rotation trigger {policy={}, dateTime={}}", policy, dateTime);
+    }
+
+    @Override
     public void onSuccess(RotationPolicy policy, LocalDateTime dateTime, File file) {
         LOGGER.debug("rotation success {policy={}, dateTime={}, file={}}", policy, dateTime, file);
     }

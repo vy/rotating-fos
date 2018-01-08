@@ -1,5 +1,7 @@
 package com.vlkan.rfos.policy;
 
+import com.vlkan.rfos.Rotatable;
+import com.vlkan.rfos.RotatingFileOutputStreamConfig;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,33 +44,35 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
     }
 
     @Override
-    public void start(final RotationPolicyContext context) {
-        TimerTask timerTask = createTimerTask(context);
-        context.getTimer().schedule(timerTask, 0, checkIntervalMillis);
+    public void start(Rotatable rotatable) {
+        TimerTask timerTask = createTimerTask(rotatable);
+        rotatable.getConfig().getTimer().schedule(timerTask, 0, checkIntervalMillis);
     }
 
-    private TimerTask createTimerTask(final RotationPolicyContext context) {
+    private TimerTask createTimerTask(final Rotatable rotatable) {
+        final RotatingFileOutputStreamConfig config = rotatable.getConfig();
         return new TimerTask() {
             @Override
             public void run() {
 
                 // Get file size.
-                LocalDateTime now = context.getClock().now();
-                File file = context.getFile();
+                LocalDateTime now = config.getClock().now();
+                File file = config.getFile();
                 long byteCount;
                 try {
                     byteCount = file.length();
                 } catch (Exception error) {
                     String message = String.format("failed accessing file size (file=%s)", file);
                     Exception extendedError = new IOException(message, error);
-                    context.getCallback().onFailure(SizeBasedRotationPolicy.this, now, file, extendedError);
+                    config.getCallback().onFailure(SizeBasedRotationPolicy.this, now, file, extendedError);
                     return;
                 }
 
                 // Rotate if necessary.
                 if (byteCount > maxByteCount) {
                     LOGGER.debug("triggering {byteCount={}}", byteCount);
-                    context.getRotatable().rotate(SizeBasedRotationPolicy.this, now, context.getCallback());
+                    config.getCallback().onTrigger(SizeBasedRotationPolicy.this, now);
+                    rotatable.rotate(SizeBasedRotationPolicy.this, now);
                 }
 
             }
@@ -76,10 +80,10 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        SizeBasedRotationPolicy that = (SizeBasedRotationPolicy) o;
+    public boolean equals(Object instance) {
+        if (this == instance) return true;
+        if (instance == null || getClass() != instance.getClass()) return false;
+        SizeBasedRotationPolicy that = (SizeBasedRotationPolicy) instance;
         return checkIntervalMillis == that.checkIntervalMillis && maxByteCount == that.maxByteCount;
     }
 

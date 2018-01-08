@@ -8,8 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -48,6 +46,11 @@ public class RotatingFileOutputStreamTest {
         final BlockingQueue<RotationPolicy> callbackSuccessPolicies = new LinkedBlockingDeque<>(1);
         final BlockingQueue<File> callbackSuccessFiles = new LinkedBlockingDeque<>(1);
         RotationCallback callback = new RotationCallback() {
+
+            @Override
+            public void onTrigger(RotationPolicy policy, LocalDateTime dateTime) {
+                LOGGER.trace("onTrigger({}, {})", policy, dateTime);
+            }
 
             @Override
             public void onSuccess(RotationPolicy policy, LocalDateTime dateTime, File file) {

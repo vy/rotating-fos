@@ -5,6 +5,8 @@ import org.joda.time.LocalDateTime;
 
 public interface Rotatable {
 
-    void rotate(RotationPolicy policy, LocalDateTime dateTime, RotationCallback callback);
+    void rotate(RotationPolicy policy, LocalDateTime dateTime);
+
+    RotatingFileOutputStreamConfig getConfig();
 
 }
