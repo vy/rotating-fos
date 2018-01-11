@@ -3,7 +3,7 @@ package com.vlkan.rfos.policy;
 import com.vlkan.rfos.Clock;
 import com.vlkan.rfos.Rotatable;
 import com.vlkan.rfos.Rotatables;
-import com.vlkan.rfos.RotatingFileOutputStreamConfig;
+import com.vlkan.rfos.RotationConfig;
 import com.vlkan.rfos.RotatingFilePattern;
 import org.joda.time.LocalDateTime;
 import org.junit.Test;
@@ -54,7 +54,7 @@ public class DailyRotationPolicyTest {
         DailyRotationPolicy policy = DailyRotationPolicy.getInstance();
         File file = mock(File.class);
         RotatingFilePattern filePattern = mock(RotatingFilePattern.class);
-        final RotatingFileOutputStreamConfig config = RotatingFileOutputStreamConfig
+        final RotationConfig config = RotationConfig
                 .builder()
                 .file(file)
                 .filePattern(filePattern)

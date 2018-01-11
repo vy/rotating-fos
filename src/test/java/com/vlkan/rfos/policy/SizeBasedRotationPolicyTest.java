@@ -3,7 +3,7 @@ package com.vlkan.rfos.policy;
 import com.vlkan.rfos.Clock;
 import com.vlkan.rfos.Rotatable;
 import com.vlkan.rfos.Rotatables;
-import com.vlkan.rfos.RotatingFileOutputStreamConfig;
+import com.vlkan.rfos.RotationConfig;
 import com.vlkan.rfos.RotatingFilePattern;
 import org.joda.time.LocalDateTime;
 import org.junit.Test;
@@ -64,7 +64,7 @@ public class SizeBasedRotationPolicyTest {
         long checkIntervalMillis = 30_000L;
         long maxByteCount = 1024L * 1024L * 32L;    // 32MB
         SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(checkIntervalMillis, maxByteCount);
-        final RotatingFileOutputStreamConfig config = RotatingFileOutputStreamConfig
+        final RotationConfig config = RotationConfig
                 .builder()
                 .file(file)
                 .filePattern(filePattern)

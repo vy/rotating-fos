@@ -20,13 +20,13 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RotatingFileOutputStream.class);
 
-    private final RotatingFileOutputStreamConfig config;
+    private final RotationConfig config;
 
     private final List<Thread> runningThreads;
 
     private volatile FileOutputStream stream;
 
-    public RotatingFileOutputStream(RotatingFileOutputStreamConfig config) {
+    public RotatingFileOutputStream(RotationConfig config) {
         this.config = config;
         this.runningThreads = Collections.synchronizedList(new LinkedList<Thread>());
         this.stream = open();
@@ -153,7 +153,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     @Override
-    public RotatingFileOutputStreamConfig getConfig() {
+    public RotationConfig getConfig() {
         return config;
     }
 

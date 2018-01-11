@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.Timer;
 
-public class RotatingFileOutputStreamConfig {
+public class RotationConfig {
 
     private final File file;
 
@@ -26,7 +26,7 @@ public class RotatingFileOutputStreamConfig {
 
     private final RotationCallback callback;
 
-    private RotatingFileOutputStreamConfig(Builder builder) {
+    private RotationConfig(Builder builder) {
         this.file = builder.file;
         this.filePattern = builder.filePattern;
         this.timer = builder.timer;
@@ -73,7 +73,7 @@ public class RotatingFileOutputStreamConfig {
     public boolean equals(Object instance) {
         if (this == instance) return true;
         if (instance == null || getClass() != instance.getClass()) return false;
-        RotatingFileOutputStreamConfig that = (RotatingFileOutputStreamConfig) instance;
+        RotationConfig that = (RotationConfig) instance;
         return append == that.append &&
                 compress == that.compress &&
                 Objects.equals(file, that.file) &&
@@ -91,7 +91,7 @@ public class RotatingFileOutputStreamConfig {
 
     @Override
     public String toString() {
-        return String.format("RotatingFileOutputStreamConfig{file=%s}", file);
+        return String.format("RotationConfig{file=%s}", file);
     }
 
     public static Builder builder() {
@@ -178,10 +178,10 @@ public class RotatingFileOutputStreamConfig {
             return this;
         }
 
-        public RotatingFileOutputStreamConfig build() {
+        public RotationConfig build() {
             prepare();
             validate();
-            return new RotatingFileOutputStreamConfig(this);
+            return new RotationConfig(this);
         }
 
         private void prepare() {

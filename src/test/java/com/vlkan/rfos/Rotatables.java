@@ -9,13 +9,13 @@ import java.util.concurrent.BlockingQueue;
 public enum Rotatables {;
 
     public static Rotatable createSpyingRotatable(
-            final RotatingFileOutputStreamConfig config,
+            final RotationConfig config,
             final BlockingQueue<RotationPolicy> rotationPolicies,
             final BlockingQueue<String> rotationDateTimeTexts) {
         return new Rotatable() {
 
             @Override
-            public RotatingFileOutputStreamConfig getConfig() {
+            public RotationConfig getConfig() {
                 return config;
             }
 

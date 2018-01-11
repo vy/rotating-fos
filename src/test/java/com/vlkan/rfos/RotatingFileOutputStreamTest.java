@@ -124,7 +124,7 @@ public class RotatingFileOutputStreamTest {
         int checkIntervalMillis = 50;
         int maxByteCount = 1024;
         SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(checkIntervalMillis, maxByteCount);
-        RotatingFileOutputStreamConfig config = RotatingFileOutputStreamConfig
+        RotationConfig config = RotationConfig
                 .builder()
                 .compress(compress)
                 .file(fileName)

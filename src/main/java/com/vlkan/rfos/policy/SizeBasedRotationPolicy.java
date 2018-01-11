@@ -1,7 +1,7 @@
 package com.vlkan.rfos.policy;
 
 import com.vlkan.rfos.Rotatable;
-import com.vlkan.rfos.RotatingFileOutputStreamConfig;
+import com.vlkan.rfos.RotationConfig;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
     }
 
     private TimerTask createTimerTask(final Rotatable rotatable) {
-        final RotatingFileOutputStreamConfig config = rotatable.getConfig();
+        final RotationConfig config = rotatable.getConfig();
         return new TimerTask() {
             @Override
             public void run() {

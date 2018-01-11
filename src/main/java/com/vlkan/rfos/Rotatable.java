@@ -7,6 +7,6 @@ public interface Rotatable {
 
     void rotate(RotationPolicy policy, LocalDateTime dateTime);
 
-    RotatingFileOutputStreamConfig getConfig();
+    RotationConfig getConfig();
 
 }

@@ -24,10 +24,10 @@ classes](https://javachannel.org/posts/how-not-to-extend-standard-collection-cla
 but `java.io.OutputStream`. Its basic usage is pretty straightforward:
 
 ```java
-RotatingFileOutputStreamConfig config = RotatingFileOutputStreamConfig
+RotationConfig config = RotationConfig
         .builder()
         .file("/tmp/app.log")
-        .filePattern("/tmp/app-%{yyyyMMdd-HHmmss.SSS}.log")
+        .filePattern("/tmp/app-%d{yyyyMMdd-HHmmss.SSS}.log")
         .policy(new SizeBasedRotationPolicy(5000 /* 5s */, 1024 * 1024 * 100 /* 100MB */))
         .policy(DailyRotationPolicy.getInstance())
         .build();
@@ -37,7 +37,7 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 }
 ```
 
-`RotatingFileOutputStreamConfig.Builder` supports the following methods:
+`RotationConfig.Builder` supports the following methods:
 
 | Method(s) | Default | Description |
 | --------- | ------- | ----------- |
@@ -63,7 +63,7 @@ the following methods:
 
 | Method | Description |
 | --------- | ----------- |
-| `RotatingFileOutputStreamConfig getConfig()` | used configuration |
+| `RotationConfig getConfig()` | used configuration |
 | `List<Thread> getRunningThreads()` | compression threads running in the background |
 
 # Caveats
