@@ -14,6 +14,8 @@ import java.io.OutputStream;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.zip.GZIPOutputStream;
 
 public class RotatingFileOutputStream extends OutputStream implements Rotatable {
@@ -24,11 +26,14 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private final List<Thread> runningThreads;
 
+    private final Lock rotationLock;
+
     private volatile FileOutputStream stream;
 
     public RotatingFileOutputStream(RotationConfig config) {
         this.config = config;
         this.runningThreads = Collections.synchronizedList(new LinkedList<Thread>());
+        this.rotationLock = new ReentrantLock();
         this.stream = open();
         startPolicies();
     }
@@ -50,12 +55,19 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public void rotate(RotationPolicy policy, LocalDateTime dateTime) {
-        try {
-            unsafeRotate(policy, dateTime);
-        } catch (Exception error) {
-            String message = String.format("rotation failure {dateTime=%s}", dateTime);
-            RuntimeException extendedError = new RuntimeException(message);
-            config.getCallback().onFailure(policy, dateTime, null, extendedError);
+        boolean acquired = rotationLock.tryLock();
+        if (!acquired) {
+            config.getCallback().onConflict(policy, dateTime);
+        } else {
+            try {
+                unsafeRotate(policy, dateTime);
+            } catch (Exception error) {
+                String message = String.format("rotation failure {dateTime=%s}", dateTime);
+                RuntimeException extendedError = new RuntimeException(message);
+                config.getCallback().onFailure(policy, dateTime, null, extendedError);
+            } finally {
+                rotationLock.unlock();
+            }
         }
     }
 
@@ -82,8 +94,15 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         // Re-open the file.
         LOGGER.debug("re-opening file {file={}}", config.getFile());
         FileOutputStream newStream = open();
-        FileOutputStream oldStream = stream;
-        stream = newStream;
+        FileOutputStream oldStream;
+        Lock writeLock = config.getLock().writeLock();
+        writeLock.lock();
+        try {
+            oldStream = stream;
+            stream = newStream;
+        } finally {
+            writeLock.unlock();
+        }
         oldStream.close();
 
         // Compress the old file, if necessary.
@@ -163,28 +182,58 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public void write(int b) throws IOException {
-        stream.write(b);
+        Lock readLock = config.getLock().readLock();
+        readLock.lock();
+        try {
+            stream.write(b);
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @Override
     public void write(byte[] b) throws IOException {
-        stream.write(b);
+        Lock readLock = config.getLock().readLock();
+        readLock.lock();
+        try {
+            stream.write(b);
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
-        stream.write(b, off, len);
+        Lock readLock = config.getLock().readLock();
+        readLock.lock();
+        try {
+            stream.write(b, off, len);
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @Override
     public void flush() throws IOException {
-        stream.flush();
+        Lock readLock = config.getLock().readLock();
+        readLock.lock();
+        try {
+            stream.flush();
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @Override
     public void close() throws IOException {
         config.getTimer().cancel();
-        stream.close();
+        Lock readLock = config.getLock().readLock();
+        readLock.lock();
+        try {
+            stream.close();
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @Override

@@ -53,6 +53,11 @@ public class RotatingFileOutputStreamTest {
             }
 
             @Override
+            public void onConflict(RotationPolicy policy, LocalDateTime dateTime) {
+                LOGGER.trace("onConflict({}, {})", policy, dateTime);
+            }
+
+            @Override
             public void onSuccess(RotationPolicy policy, LocalDateTime dateTime, File file) {
                 LOGGER.trace("onSuccess({}, {}, {})", policy, dateTime, file);
                 try {

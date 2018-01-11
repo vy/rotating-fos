@@ -42,12 +42,13 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 | Method(s) | Default | Description |
 | --------- | ------- | ----------- |
 | `file(File)`<br/>`file(String)` | N/A | file accessed (e.g., `/tmp/app.log`) |
-| `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| N/A | rotated file pattern (e.g., `/tmp/app-%{yyyyMMdd-HHmmss-SSS}.log`) |
+| `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| N/A | rotated file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
 | `policy(RotationPolicy)`<br/>`policies(Set<RotationPolicy> policies)` | N/A | rotation policies |
-| `timer(Timer)` | `new Timer()` | timer to be used for scheduling policies |
+| `timer(Timer)` | `Timer` | timer for scheduling policies |
+| `lock(ReadWriteLock)` | `ReentrantReadWriteLock` | lock for synchronizing stream access (incl. rotations) |
 | `append(boolean)` | `true` | append while opening the `file` |
 | `compress(boolean)` | `false` | GZIP compression after rotation |
-| `clock(Clock)` | `SystemClock` | clock to be used for retrieving date and time |
+| `clock(Clock)` | `SystemClock` | clock for retrieving date and time |
 | `callback(RotationCallback)` | `LoggingRotationCallback` | rotation callback |
 
 Packaged rotation policies are listed below. (You can also create your own
@@ -68,17 +69,30 @@ the following methods:
 
 # Caveats
 
-- **Rotated file conflicts are not resolved by `rotating-fos`!** Once a
+- **Rotated file conflicts are not resolved by `rotating-fos`.** Once a
   rotation policy gets triggered, `rotating-fos` applies the given
   `filePattern` to determine the rotated file name. In order to avoid
   previously generated files to be overridden, prefer a sufficiently
   fine-grained date-time pattern.
 
-  For instance, given `filePattern` is `/tmp/app-%{yyyyMMdd}.log`, if
+  For instance, given `filePattern` is `/tmp/app-%d{yyyyMMdd}.log`, if
   `SizeBasedRotationPolicy` gets triggered multiple times within a day,
   the last one will override the earlier generations in the same day.
   In order to avoid this, you should have been using a date-time pattern
-  with a higher resolution, such as `/tmp/app-%{yyyyMMdd-HHmmss-SSS}.log`.
+  with a higher resolution, such as `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`.
+
+- **Make sure `RotationCallback` methods are not blocking.** Callbacks are
+  invoked using the `Timer` thread passed via `RotationConfig`. Hence
+  blocking callback methods are going to block `Timer` thread too.
+
+- **Conflicting rotations are discarded.** When a rotation gets triggered
+  while one is still in progress, the latter will be discarded. (Conflicts
+  are acknowledged via `RotationCallback#onConflict` method.)
+
+# Contributors
+
+- [Jonas (yawkat) Konrad](http://yawk.at/) (`RotatingFileOutputStream`
+  thread-safety improvements)
 
 # License
 
