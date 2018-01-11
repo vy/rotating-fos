@@ -5,7 +5,7 @@
 
     <groupId>com.vlkan.rfos</groupId>
     <artifactId>rotating-fos</artifactId>
-    <version>0.6-SNAPSHOT</version>
+    <version>0.6</version>
 
     <name>RotatingFileOutputStream</name>
     <description>Sneakily rotating your FileOutputStream since 2017.</description>
@@ -38,7 +38,7 @@
         <url>http://github.com/vy/rotating-fos</url>
         <connection>scm:git:git@github.com:vy/rotating-fos.git</connection>
         <developerConnection>scm:git:git@github.com:vy/rotating-fos.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>v0.6</tag>
     </scm>
 
     <distributionManagement>
