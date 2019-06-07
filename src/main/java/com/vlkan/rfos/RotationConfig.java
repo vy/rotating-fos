@@ -7,8 +7,6 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Timer;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class RotationConfig {
 
@@ -17,8 +15,6 @@ public class RotationConfig {
     private final RotatingFilePattern filePattern;
 
     private final Timer timer;
-
-    private final ReadWriteLock lock;
 
     private final Set<RotationPolicy> policies;
 
@@ -34,7 +30,6 @@ public class RotationConfig {
         this.file = builder.file;
         this.filePattern = builder.filePattern;
         this.timer = builder.timer;
-        this.lock = builder.lock;
         this.policies = builder.policies;
         this.append = builder.append;
         this.compress = builder.compress;
@@ -52,10 +47,6 @@ public class RotationConfig {
 
     public Timer getTimer() {
         return timer;
-    }
-
-    public ReadWriteLock getLock() {
-        return lock;
     }
 
     public Set<RotationPolicy> getPolicies() {
@@ -88,7 +79,6 @@ public class RotationConfig {
                 Objects.equals(file, that.file) &&
                 Objects.equals(filePattern, that.filePattern) &&
                 Objects.equals(timer, that.timer) &&
-                Objects.equals(lock, that.lock) &&
                 Objects.equals(policies, that.policies) &&
                 Objects.equals(clock, that.clock) &&
                 Objects.equals(callback, that.callback);
@@ -96,7 +86,7 @@ public class RotationConfig {
 
     @Override
     public int hashCode() {
-        return Objects.hash(file, filePattern, timer, lock, policies, append, compress, clock, callback);
+        return Objects.hash(file, filePattern, timer, policies, append, compress, clock, callback);
     }
 
     @Override
@@ -115,8 +105,6 @@ public class RotationConfig {
         private RotatingFilePattern filePattern;
 
         private Timer timer;
-
-        private ReadWriteLock lock;
 
         private Set<RotationPolicy> policies;
 
@@ -154,11 +142,6 @@ public class RotationConfig {
 
         public Builder timer(Timer timer) {
             this.timer = timer;
-            return this;
-        }
-
-        public Builder lock(ReadWriteLock lock) {
-            this.lock = lock;
             return this;
         }
 
@@ -204,9 +187,6 @@ public class RotationConfig {
         private void prepare() {
             if (timer == null) {
                 timer = new Timer();
-            }
-            if (lock == null) {
-                lock = new ReentrantReadWriteLock();
             }
         }
 

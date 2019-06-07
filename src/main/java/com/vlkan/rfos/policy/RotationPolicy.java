@@ -6,4 +6,8 @@ public interface RotationPolicy {
 
     void start(Rotatable rotatable);
 
+    boolean isWriteSensitive();
+
+    void acceptWrite(long byteCount);
+
 }

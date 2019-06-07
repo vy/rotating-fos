@@ -4,6 +4,7 @@ import com.vlkan.rfos.policy.RotationPolicy;
 import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
 import org.joda.time.LocalDateTime;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,39 +23,26 @@ public class RotatingFileOutputStreamTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(RotatingFileOutputStreamTest.class);
 
     @Test
-    public void test() throws Exception {
-        test(true);
-        test(false);
+    public void test_write_insensitive_policy() throws Exception {
+        test_write_insensitive_policy(false);
     }
 
-    private void test(boolean compress) throws Exception {
+    @Test
+    public void test_write_insensitive_policy_with_compression() throws Exception {
+        test_write_insensitive_policy(true);
+    }
 
-        // Set file names.
-        String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(Filesystem.tmpDir(), className + ".log");
-        String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(Filesystem.tmpDir(), className + "-%d{yyyy}.log").getAbsolutePath();
-        String rotatedFileNameSuffix = compress ? ".gz" : "";
-        File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))) + rotatedFileNameSuffix);
-        String rotatedFileName = rotatedFile.getAbsolutePath();
+    private static final class RotationCallbackRecorder {
 
-        // Cleanup files.
-        Filesystem.delete(fileName);
-        Filesystem.delete(rotatedFileName);
+        private final BlockingQueue<RotationPolicy> callbackSuccessPolicies = new LinkedBlockingDeque<>(1);
 
-        // Create the rotation callback.
-        final BlockingQueue<RotationPolicy> callbackSuccessPolicies = new LinkedBlockingDeque<>(1);
-        final BlockingQueue<File> callbackSuccessFiles = new LinkedBlockingDeque<>(1);
-        RotationCallback callback = new RotationCallback() {
+        private final BlockingQueue<File> callbackSuccessFiles = new LinkedBlockingDeque<>(1);
+
+        private final RotationCallback callback = new RotationCallback() {
 
             @Override
             public void onTrigger(RotationPolicy policy, LocalDateTime dateTime) {
                 LOGGER.trace("onTrigger({}, {})", policy, dateTime);
-            }
-
-            @Override
-            public void onConflict(RotationPolicy policy, LocalDateTime dateTime) {
-                LOGGER.trace("onConflict({}, {})", policy, dateTime);
             }
 
             @Override
@@ -76,7 +64,25 @@ public class RotatingFileOutputStreamTest {
 
         };
 
-        // Create the timer.
+    }
+
+    private void test_write_insensitive_policy(boolean compress) throws Exception {
+
+        // Set file names.
+        String className = RotatingFileOutputStream.class.getSimpleName();
+        File file = new File(Filesystem.tmpDir(), className + ".log");
+        String fileName = file.getAbsolutePath();
+        String fileNamePattern = new File(Filesystem.tmpDir(), className + "-%d{yyyy}.log").getAbsolutePath();
+        String rotatedFileNameSuffix = compress ? ".gz" : "";
+        File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))) + rotatedFileNameSuffix);
+        String rotatedFileName = rotatedFile.getAbsolutePath();
+
+        // Cleanup files.
+        Filesystem.delete(fileName);
+        Filesystem.delete(rotatedFileName);
+
+        // Create the timer which is advanced by permits in a queue.
+        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
         final BlockingQueue<Object> timerTaskExecutionPermits = new LinkedBlockingDeque<>();
         final BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>(1);
         final BlockingQueue<Long> timerPeriods = new LinkedBlockingDeque<>(1);
@@ -91,6 +97,7 @@ public class RotatingFileOutputStreamTest {
                         boolean first = true;
                         Thread thread = Thread.currentThread();
                         while (true) {
+
                             LOGGER.trace("awaiting task execution permit");
                             try {
                                 timerTaskExecutionPermits.poll(1, TimeUnit.SECONDS);
@@ -98,6 +105,7 @@ public class RotatingFileOutputStreamTest {
                                 LOGGER.warn("task execution permit await is interrupted");
                                 thread.interrupt();
                             }
+
                             if (first) {
                                 LOGGER.trace("executing task for the first time");
                                 first = false;
@@ -112,6 +120,7 @@ public class RotatingFileOutputStreamTest {
                                 LOGGER.trace("executing task");
                             }
                             task.run();
+
                             LOGGER.trace("pushing task execution count");
                             try {
                                 timerTaskExecutionCounts.put(++executionCount);
@@ -119,6 +128,7 @@ public class RotatingFileOutputStreamTest {
                                 LOGGER.warn("timer task execution count push is interrupted");
                                 thread.interrupt();
                             }
+
                         }
                     }
                 }).start();
@@ -129,6 +139,7 @@ public class RotatingFileOutputStreamTest {
         int checkIntervalMillis = 50;
         int maxByteCount = 1024;
         SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(checkIntervalMillis, maxByteCount);
+        RotationCallbackRecorder callbackRecorder = new RotationCallbackRecorder();
         RotationConfig config = RotationConfig
                 .builder()
                 .compress(compress)
@@ -136,7 +147,7 @@ public class RotatingFileOutputStreamTest {
                 .filePattern(fileNamePattern)
                 .timer(timer)
                 .policy(policy)
-                .callback(callback)
+                .callback(callbackRecorder.callback)
                 .build();
         RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
 
@@ -155,9 +166,9 @@ public class RotatingFileOutputStreamTest {
         assertThat(timerTaskExecutionCount1).isEqualTo(1);
 
         // Verify no rotations so far.
-        RotationPolicy callbackSuccessPolicy1 = callbackSuccessPolicies.peek();
+        RotationPolicy callbackSuccessPolicy1 = callbackRecorder.callbackSuccessPolicies.peek();
         assertThat(callbackSuccessPolicy1).isNull();
-        File callbackSuccessFile1 = callbackSuccessFiles.peek();
+        File callbackSuccessFile1 = callbackRecorder.callbackSuccessFiles.peek();
         assertThat(callbackSuccessFile1).isNull();
 
         // Increase the size of the file just to the edge.
@@ -177,13 +188,13 @@ public class RotatingFileOutputStreamTest {
         assertThat(timerTaskExecutionCount2).isEqualTo(2);
 
         // Verify no rotations so far.
-        RotationPolicy callbackSuccessPolicy2 = callbackSuccessPolicies.peek();
+        RotationPolicy callbackSuccessPolicy2 = callbackRecorder.callbackSuccessPolicies.peek();
         assertThat(callbackSuccessPolicy2).isNull();
-        File callbackSuccessFile2 = callbackSuccessFiles.peek();
+        File callbackSuccessFile2 = callbackRecorder.callbackSuccessFiles.peek();
         assertThat(callbackSuccessFile2).isNull();
 
         // Push the file size off the threshold.
-        LOGGER.trace("writing more to file");
+        LOGGER.trace("writing more byte to file");
         stream.write(maxByteCount);
         stream.flush();
         assertThat(file.length()).isEqualTo(maxByteCount + 1);
@@ -197,10 +208,10 @@ public class RotatingFileOutputStreamTest {
         assertThat(timerTaskExecutionCount3).isEqualTo(3);
 
         // Verify the rotation.
-        RotationPolicy callbackSuccessPolicy3 = callbackSuccessPolicies.poll(1, TimeUnit.SECONDS);
+        RotationPolicy callbackSuccessPolicy3 = callbackRecorder.callbackSuccessPolicies.poll(1, TimeUnit.SECONDS);
         assertThat(callbackSuccessPolicy3).isEqualTo(policy);
-        File callbackSuccessFile3 = callbackSuccessFiles.poll(1, TimeUnit.SECONDS);
-        assertThat(callbackSuccessFile3).isEqualTo(rotatedFile);
+        File callbackSuccessFile3 = callbackRecorder.callbackSuccessFiles.poll(1, TimeUnit.SECONDS);
+        assertThat(callbackSuccessFile3).isNotNull().isEqualTo(rotatedFile);
         long callbackSuccessFile3Length = callbackSuccessFile3.length();
         if (compress) {
             assertThat(callbackSuccessFile3Length).isGreaterThan(0);
@@ -208,6 +219,125 @@ public class RotatingFileOutputStreamTest {
             assertThat(callbackSuccessFile3Length).isEqualTo(maxByteCount + 1);
         }
         assertThat(file.length()).isEqualTo(0);
+
+    }
+
+    @Test
+    public void test_write_sensitive_policy() throws Exception {
+
+        // Set file names.
+        String className = RotatingFileOutputStream.class.getSimpleName();
+        File file = new File(Filesystem.tmpDir(), className + ".log");
+        String fileName = file.getAbsolutePath();
+        String fileNamePattern = new File(Filesystem.tmpDir(), className + "-%d{yyyy}.log").getAbsolutePath();
+        File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))));
+        String rotatedFileName = rotatedFile.getAbsolutePath();
+
+        // Cleanup files.
+        Filesystem.delete(fileName);
+        Filesystem.delete(rotatedFileName);
+
+        // Create the stream.
+        int maxByteCount = 1024;
+        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(0, maxByteCount);
+        RotationCallbackRecorder callbackRecorder = new RotationCallbackRecorder();
+        Timer timer = Mockito.mock(Timer.class);
+        RotationConfig config = RotationConfig
+                .builder()
+                .file(fileName)
+                .filePattern(fileNamePattern)
+                .timer(timer)
+                .policy(policy)
+                .callback(callbackRecorder.callback)
+                .build();
+        RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
+
+        // Verify no rotations so far.
+        RotationPolicy callbackSuccessPolicy1 = callbackRecorder.callbackSuccessPolicies.peek();
+        assertThat(callbackSuccessPolicy1).isNull();
+        File callbackSuccessFile1 = callbackRecorder.callbackSuccessFiles.peek();
+        assertThat(callbackSuccessFile1).isNull();
+
+        // Increase the size of the file just to the edge.
+        LOGGER.trace("writing to file");
+        for (int byteIndex = 0; byteIndex < maxByteCount; byteIndex++) {
+            stream.write(byteIndex);
+        }
+        stream.flush();
+        assertThat(file.length()).isEqualTo(maxByteCount);
+
+        // Verify no rotations so far.
+        RotationPolicy callbackSuccessPolicy2 = callbackRecorder.callbackSuccessPolicies.peek();
+        assertThat(callbackSuccessPolicy2).isNull();
+        File callbackSuccessFile2 = callbackRecorder.callbackSuccessFiles.peek();
+        assertThat(callbackSuccessFile2).isNull();
+
+        // Push the file size off the threshold.
+        LOGGER.trace("writing more byte to file");
+        stream.write(maxByteCount);
+
+        // Verify the rotation.
+        RotationPolicy callbackSuccessPolicy3 = callbackRecorder.callbackSuccessPolicies.poll(1, TimeUnit.SECONDS);
+        assertThat(callbackSuccessPolicy3).isEqualTo(policy);
+        File callbackSuccessFile3 = callbackRecorder.callbackSuccessFiles.poll(1, TimeUnit.SECONDS);
+        assertThat(callbackSuccessFile3).isNotNull().isEqualTo(rotatedFile);
+        long callbackSuccessFile3Length = callbackSuccessFile3.length();
+        assertThat(callbackSuccessFile3Length).isEqualTo(maxByteCount);
+        assertThat(file.length()).isEqualTo(1);
+
+    }
+
+    @Test
+    public void test_empty_files_are_not_rotated() throws Exception {
+
+        // Set file names.
+        String className = RotatingFileOutputStream.class.getSimpleName();
+        File file = new File(Filesystem.tmpDir(), className + ".log");
+        String fileName = file.getAbsolutePath();
+        String fileNamePattern = new File(Filesystem.tmpDir(), className + "-%d{yyyy}.log").getAbsolutePath();
+        File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))));
+        String rotatedFileName = rotatedFile.getAbsolutePath();
+
+        // Cleanup files.
+        Filesystem.delete(fileName);
+        Filesystem.delete(rotatedFileName);
+
+        // Create the stream.
+        int maxByteCount = 1024;
+        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(0, maxByteCount);
+        RotationCallbackRecorder callbackRecorder = new RotationCallbackRecorder();
+        Timer timer = Mockito.mock(Timer.class);
+        RotationConfig config = RotationConfig
+                .builder()
+                .file(fileName)
+                .filePattern(fileNamePattern)
+                .timer(timer)
+                .policy(policy)
+                .callback(callbackRecorder.callback)
+                .build();
+        RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
+
+        // Verify no rotations so far.
+        RotationPolicy callbackSuccessPolicy1 = callbackRecorder.callbackSuccessPolicies.peek();
+        assertThat(callbackSuccessPolicy1).isNull();
+        File callbackSuccessFile1 = callbackRecorder.callbackSuccessFiles.peek();
+        assertThat(callbackSuccessFile1).isNull();
+
+        // Write payload with size exceeding the threshold.
+        LOGGER.trace("writing to file");
+        byte[] payload = new byte[2 * maxByteCount];
+        for (int byteIndex = 0; byteIndex < payload.length; byteIndex++) {
+            payload[byteIndex] = (byte) byteIndex;
+        }
+        stream.write(payload);
+        stream.flush();
+        assertThat(file.length()).isEqualTo(payload.length);
+
+        // Verify no rotations so far.
+        RotationPolicy callbackSuccessPolicy2 = callbackRecorder.callbackSuccessPolicies.peek();
+        assertThat(callbackSuccessPolicy2).isNull();
+        File callbackSuccessFile2 = callbackRecorder.callbackSuccessFiles.peek();
+        assertThat(callbackSuccessFile2).isNull();
 
     }
 

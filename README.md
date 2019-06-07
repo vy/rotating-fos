@@ -85,10 +85,6 @@ the following methods:
   invoked using the `Timer` thread passed via `RotationConfig`. Hence
   blocking callback methods are going to block `Timer` thread too.
 
-- **Conflicting rotations are discarded.** When a rotation gets triggered
-  while one is still in progress, the latter will be discarded. (Conflicts
-  are acknowledged via `RotationCallback#onConflict` method.)
-
 # Contributors
 
 - [Jonas (yawkat) Konrad](http://yawk.at/) (`RotatingFileOutputStream`
