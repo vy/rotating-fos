@@ -5,17 +5,8 @@ import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.io.*;
+import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
 public class RotatingFileOutputStream extends OutputStream implements Rotatable {
@@ -26,16 +17,26 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private final List<Thread> runningThreads;
 
-    private final Lock rotationLock;
+    private final List<RotationPolicy> writeSensitivePolicies;
 
-    private volatile FileOutputStream stream;
+    private volatile ByteCountingOutputStream stream;
 
     public RotatingFileOutputStream(RotationConfig config) {
         this.config = config;
         this.runningThreads = Collections.synchronizedList(new LinkedList<Thread>());
-        this.rotationLock = new ReentrantLock();
+        this.writeSensitivePolicies = collectWriteSensitivePolicies(config.getPolicies());
         this.stream = open();
         startPolicies();
+    }
+
+    private static List<RotationPolicy> collectWriteSensitivePolicies(Set<RotationPolicy> policies) {
+        List<RotationPolicy> writeSensitivePolicies = new ArrayList<>();
+        for (RotationPolicy policy : policies) {
+            if (policy.isWriteSensitive()) {
+                writeSensitivePolicies.add(policy);
+            }
+        }
+        return writeSensitivePolicies;
     }
 
     private void startPolicies() {
@@ -44,9 +45,11 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
     }
 
-    private FileOutputStream open() {
+    private ByteCountingOutputStream open() {
         try {
-            return new FileOutputStream(config.getFile(), config.isAppend());
+            FileOutputStream fileOutputStream = new FileOutputStream(config.getFile(), config.isAppend());
+            long size = config.isAppend() ? config.getFile().length() : 0;
+            return new ByteCountingOutputStream(fileOutputStream, size);
         } catch (IOException error) {
             String message = String.format("file open failure {file=%s}", config.getFile());
             throw new RuntimeException(message);
@@ -55,55 +58,45 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public void rotate(RotationPolicy policy, LocalDateTime dateTime) {
-        boolean acquired = rotationLock.tryLock();
-        if (!acquired) {
-            config.getCallback().onConflict(policy, dateTime);
-        } else {
-            try {
-                unsafeRotate(policy, dateTime);
-            } catch (Exception error) {
-                String message = String.format("rotation failure {dateTime=%s}", dateTime);
-                RuntimeException extendedError = new RuntimeException(message);
-                config.getCallback().onFailure(policy, dateTime, null, extendedError);
-            } finally {
-                rotationLock.unlock();
-            }
+        try {
+            unsafeRotate(policy, dateTime);
+        } catch (Exception error) {
+            String message = String.format("rotation failure {dateTime=%s}", dateTime);
+            RuntimeException extendedError = new RuntimeException(message, error);
+            config.getCallback().onFailure(policy, dateTime, null, extendedError);
         }
     }
 
     private void unsafeRotate(RotationPolicy policy, LocalDateTime dateTime) throws Exception {
 
-        // Skip rotation if file is empty.
-        if (config.getFile().length() == 0) {
-            LOGGER.debug("empty file, skipping rotation {file={}}");
-            config.getCallback().onSuccess(policy, dateTime, null);
-            return;
-        }
+        File rotatedFile;
+        synchronized (this) {
 
-        // Rename the file.
-        File rotatedFile = config.getFilePattern().create(dateTime).getAbsoluteFile();
-        LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
-        boolean renamed = config.getFile().renameTo(rotatedFile);
-        if (!renamed) {
-            String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
-            IOException error = new IOException(message);
-            config.getCallback().onFailure(policy, dateTime, rotatedFile, error);
-            return;
-        }
+            // Skip rotation if the file is empty.
+            if (config.getFile().length() == 0) {
+                LOGGER.debug("empty file, skipping rotation {file={}}", config.getFile());
+                return;
+            }
 
-        // Re-open the file.
-        LOGGER.debug("re-opening file {file={}}", config.getFile());
-        FileOutputStream newStream = open();
-        FileOutputStream oldStream;
-        Lock writeLock = config.getLock().writeLock();
-        writeLock.lock();
-        try {
-            oldStream = stream;
+            // Rename the file.
+            rotatedFile = config.getFilePattern().create(dateTime).getAbsoluteFile();
+            LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
+            boolean renamed = config.getFile().renameTo(rotatedFile);
+            if (!renamed) {
+                String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
+                IOException error = new IOException(message);
+                config.getCallback().onFailure(policy, dateTime, rotatedFile, error);
+                return;
+            }
+
+            // Re-open the file.
+            LOGGER.debug("re-opening file {file={}}", config.getFile());
+            ByteCountingOutputStream newStream = open();
+            ByteCountingOutputStream oldStream = stream;
             stream = newStream;
-        } finally {
-            writeLock.unlock();
+            oldStream.parent().close();
+
         }
-        oldStream.close();
 
         // Compress the old file, if necessary.
         if (config.isCompress()) {
@@ -181,59 +174,44 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     @Override
-    public void write(int b) throws IOException {
-        Lock readLock = config.getLock().readLock();
-        readLock.lock();
-        try {
-            stream.write(b);
-        } finally {
-            readLock.unlock();
+    public synchronized void write(int b) throws IOException {
+        long byteCount = stream.size() + 1;
+        notifyWriteSensitivePolicies(byteCount);
+        stream.write(b);
+    }
+
+    @Override
+    public synchronized void write(byte[] b) throws IOException {
+        long byteCount = stream.size() + b.length;
+        notifyWriteSensitivePolicies(byteCount);
+        stream.write(b);
+    }
+
+    @Override
+    public synchronized void write(byte[] b, int off, int len) throws IOException {
+        long byteCount = stream.size() + len;
+        notifyWriteSensitivePolicies(byteCount);
+        stream.write(b, off, len);
+    }
+
+    private void notifyWriteSensitivePolicies(long byteCount) {
+        // noinspection ForLoopReplaceableByForEach
+        for (int writeSensitivePolicyIndex = 0; writeSensitivePolicyIndex < writeSensitivePolicies.size(); writeSensitivePolicyIndex++) {
+            RotationPolicy writeSensitivePolicy = writeSensitivePolicies.get(writeSensitivePolicyIndex);
+            writeSensitivePolicy.acceptWrite(byteCount);
         }
     }
 
     @Override
-    public void write(byte[] b) throws IOException {
-        Lock readLock = config.getLock().readLock();
-        readLock.lock();
-        try {
-            stream.write(b);
-        } finally {
-            readLock.unlock();
-        }
+    public synchronized void flush() throws IOException {
+        stream.flush();
     }
 
     @Override
-    public void write(byte[] b, int off, int len) throws IOException {
-        Lock readLock = config.getLock().readLock();
-        readLock.lock();
-        try {
-            stream.write(b, off, len);
-        } finally {
-            readLock.unlock();
-        }
-    }
-
-    @Override
-    public void flush() throws IOException {
-        Lock readLock = config.getLock().readLock();
-        readLock.lock();
-        try {
-            stream.flush();
-        } finally {
-            readLock.unlock();
-        }
-    }
-
-    @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         config.getTimer().cancel();
-        Lock readLock = config.getLock().readLock();
-        readLock.lock();
-        try {
-            stream.close();
-        } finally {
-            readLock.unlock();
-        }
+        stream.parent().close();
+        stream = null;
     }
 
     @Override

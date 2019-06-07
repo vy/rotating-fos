@@ -19,9 +19,11 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
 
     private final long maxByteCount;
 
+    private Rotatable rotatable;
+
     public SizeBasedRotationPolicy(long checkIntervalMillis, long maxByteCount) {
 
-        if (checkIntervalMillis < 1) {
+        if (checkIntervalMillis < 0) {
             String message = String.format("invalid interval {checkIntervalMillis=%d}", checkIntervalMillis);
             throw new IllegalArgumentException(message);
         }
@@ -44,9 +46,25 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
     }
 
     @Override
+    public boolean isWriteSensitive() {
+        return checkIntervalMillis == 0;
+    }
+
+    @Override
+    public void acceptWrite(long byteCount) {
+        if (byteCount > maxByteCount) {
+            LocalDateTime now = rotatable.getConfig().getClock().now();
+            rotate(now, byteCount, rotatable);
+        }
+    }
+
+    @Override
     public void start(Rotatable rotatable) {
-        TimerTask timerTask = createTimerTask(rotatable);
-        rotatable.getConfig().getTimer().schedule(timerTask, 0, checkIntervalMillis);
+        this.rotatable = rotatable;
+        if (checkIntervalMillis > 0) {
+            TimerTask timerTask = createTimerTask(rotatable);
+            rotatable.getConfig().getTimer().schedule(timerTask, 0, checkIntervalMillis);
+        }
     }
 
     private TimerTask createTimerTask(final Rotatable rotatable) {
@@ -62,7 +80,7 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
                 try {
                     byteCount = file.length();
                 } catch (Exception error) {
-                    String message = String.format("failed accessing file size (file=%s)", file);
+                    String message = String.format("failed accessing file size {file=%s}", file);
                     Exception extendedError = new IOException(message, error);
                     config.getCallback().onFailure(SizeBasedRotationPolicy.this, now, file, extendedError);
                     return;
@@ -70,13 +88,17 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
 
                 // Rotate if necessary.
                 if (byteCount > maxByteCount) {
-                    LOGGER.debug("triggering {byteCount={}}", byteCount);
-                    config.getCallback().onTrigger(SizeBasedRotationPolicy.this, now);
-                    rotatable.rotate(SizeBasedRotationPolicy.this, now);
+                    rotate(now, byteCount, rotatable);
                 }
 
             }
         };
+    }
+
+    private void rotate(LocalDateTime now, long byteCount, Rotatable rotatable) {
+        LOGGER.debug("triggering {byteCount={}}", byteCount);
+        rotatable.getConfig().getCallback().onTrigger(SizeBasedRotationPolicy.this, now);
+        rotatable.rotate(SizeBasedRotationPolicy.this, now);
     }
 
     @Override

@@ -11,6 +11,14 @@ import java.util.TimerTask;
 public abstract class TimeBasedRotationPolicy implements RotationPolicy {
 
     @Override
+    public boolean isWriteSensitive() {
+        return false;
+    }
+
+    @Override
+    public void acceptWrite(long byteCount) {}
+
+    @Override
     public void start(Rotatable rotatable) {
         RotationConfig config = rotatable.getConfig();
         LocalDateTime triggerDateTime = getTriggerDateTime(config.getClock());
