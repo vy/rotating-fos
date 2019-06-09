@@ -1,14 +1,10 @@
 package com.vlkan.rfos.policy;
 
-import com.vlkan.rfos.Clock;
-import com.vlkan.rfos.Rotatable;
-import com.vlkan.rfos.Rotatables;
-import com.vlkan.rfos.RotationConfig;
-import com.vlkan.rfos.RotatingFilePattern;
-import org.joda.time.LocalDateTime;
+import com.vlkan.rfos.*;
 import org.junit.Test;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
@@ -83,7 +79,7 @@ public class SizeBasedRotationPolicyTest {
 
         // Setup the 1st clock tick.
         String now1Text = "2017-12-31T00:00:00.000";
-        when(clock.now()).thenReturn(LocalDateTime.parse(now1Text));
+        when(clock.now()).thenReturn(Instant.parse(now1Text));
 
         // Setup the 1st file length probe.
         when(file.length()).thenReturn(1024L);

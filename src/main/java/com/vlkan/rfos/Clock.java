@@ -1,13 +1,23 @@
 package com.vlkan.rfos;
 
-import org.joda.time.LocalDateTime;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 
 public interface Clock {
 
-    LocalDateTime now();
+    Instant now();
 
-    LocalDateTime midnight();
+    Instant midnight();
 
-    LocalDateTime sundayMidnight();
+    Instant sundayMidnight();
+
+    String ISO_LOCAL_DATE_TIME_WITH_MILLIS = "yyyy-MM-dd'T'HH:mm:ss.SSS";
+
+    DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(ISO_LOCAL_DATE_TIME_WITH_MILLIS) ;
+
+    // TODO Should we move this to a util class? - Lukas Bradley
+    static Instant parse(String isoLocalDateTimeWithMillis) {
+        return Instant.from(FORMATTER.parse(isoLocalDateTimeWithMillis)) ;
+    }
 
 }

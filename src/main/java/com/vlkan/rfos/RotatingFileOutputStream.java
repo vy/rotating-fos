@@ -1,11 +1,11 @@
 package com.vlkan.rfos;
 
 import com.vlkan.rfos.policy.RotationPolicy;
-import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.time.Instant;
 import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
@@ -23,7 +23,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     public RotatingFileOutputStream(RotationConfig config) {
         this.config = config;
-        this.runningThreads = Collections.synchronizedList(new LinkedList<Thread>());
+        this.runningThreads = Collections.synchronizedList(new LinkedList<>());
         this.writeSensitivePolicies = collectWriteSensitivePolicies(config.getPolicies());
         this.stream = open();
         startPolicies();
@@ -57,7 +57,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     @Override
-    public void rotate(RotationPolicy policy, LocalDateTime dateTime) {
+    public void rotate(RotationPolicy policy, Instant dateTime) {
         try {
             unsafeRotate(policy, dateTime);
         } catch (Exception error) {
@@ -67,7 +67,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
     }
 
-    private void unsafeRotate(RotationPolicy policy, LocalDateTime dateTime) throws Exception {
+    private void unsafeRotate(RotationPolicy policy, Instant dateTime) throws Exception {
 
         File rotatedFile;
         synchronized (this) {
@@ -109,7 +109,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     }
 
-    private void asyncCompress(final RotationPolicy policy, final LocalDateTime dateTime, final File rotatedFile, final RotationCallback callback) {
+    private void asyncCompress(final RotationPolicy policy, final Instant dateTime, final File rotatedFile, final RotationCallback callback) {
         String threadName = String.format("%s.compress(%s)", RotatingFileOutputStream.class.getSimpleName(), rotatedFile);
         Runnable threadTask = new Runnable() {
             @Override

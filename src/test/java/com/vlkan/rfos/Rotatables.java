@@ -1,9 +1,9 @@
 package com.vlkan.rfos;
 
 import com.vlkan.rfos.policy.RotationPolicy;
-import org.joda.time.LocalDateTime;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.concurrent.BlockingQueue;
 
 public enum Rotatables {;
@@ -20,7 +20,7 @@ public enum Rotatables {;
             }
 
             @Override
-            public void rotate(RotationPolicy policy, LocalDateTime dateTime) {
+            public void rotate(RotationPolicy policy, Instant dateTime) {
                 try {
                     rotationPolicies.put(policy);
                     rotationDateTimeTexts.put(dateTime.toString());

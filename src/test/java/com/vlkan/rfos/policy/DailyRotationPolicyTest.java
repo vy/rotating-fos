@@ -1,14 +1,10 @@
 package com.vlkan.rfos.policy;
 
-import com.vlkan.rfos.Clock;
-import com.vlkan.rfos.Rotatable;
-import com.vlkan.rfos.Rotatables;
-import com.vlkan.rfos.RotationConfig;
-import com.vlkan.rfos.RotatingFilePattern;
-import org.joda.time.LocalDateTime;
+import com.vlkan.rfos.*;
 import org.junit.Test;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -33,7 +29,7 @@ public class DailyRotationPolicyTest {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        String timerDateTimeText = LocalDateTime.fromDateFields(date).toString();
+                        String timerDateTimeText = date.toInstant().toString();
                         try {
                             timerDateTimeTexts.put(timerDateTimeText);
                         } catch (InterruptedException ignored) {
@@ -48,7 +44,7 @@ public class DailyRotationPolicyTest {
         // Setup the 1st clock tick.
         Clock clock = mock(Clock.class);
         String midnight1Text = "2017-12-29T00:00:00.000";
-        when(clock.midnight()).thenReturn(LocalDateTime.parse(midnight1Text));
+        when(clock.midnight()).thenReturn(Instant.parse(midnight1Text));
 
         // Create the config.
         DailyRotationPolicy policy = DailyRotationPolicy.getInstance();
@@ -73,7 +69,7 @@ public class DailyRotationPolicyTest {
 
         // Setup the 2nd clock tick. (Will be consumed when we start draining from blocking queues.)
         String midnight2Text = "2017-12-30T00:00:00.000";
-        when(clock.midnight()).thenReturn(LocalDateTime.parse(midnight2Text));
+        when(clock.midnight()).thenReturn(Instant.parse(midnight2Text));
 
         // Consume the 1st blocking queue entries.
         String actualTimerDateTimeText1 = timerDateTimeTexts.poll(1, TimeUnit.SECONDS);

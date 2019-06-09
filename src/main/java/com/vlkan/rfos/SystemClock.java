@@ -1,7 +1,9 @@
 package com.vlkan.rfos;
 
-import org.joda.time.DateTime;
-import org.joda.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
 
 public class SystemClock implements Clock {
 
@@ -16,27 +18,30 @@ public class SystemClock implements Clock {
     }
 
     @Override
-    public LocalDateTime now() {
-        return LocalDateTime.now();
+    public Instant now() {
+        return Instant.now();
     }
 
     @Override
-    public LocalDateTime midnight() {
-        return currentDateTime().plusDays(1).withTimeAtStartOfDay().toLocalDateTime();
+    public Instant midnight() {
+        return midnight(currentDateTime().plus(Duration.ofDays(1)));
     }
 
     @Override
-    public LocalDateTime sundayMidnight() {
-        DateTime today = currentDateTime();
-        int dayIndex = today.getDayOfWeek() - 1;
+    public Instant sundayMidnight() {
+        Instant today = currentDateTime();
+        int dayIndex = today.get(ChronoField.DAY_OF_WEEK) - 1;
         int dayOffset = 7 - dayIndex;
-        DateTime monday = today.plusDays(dayOffset);
-        DateTime mondayStart = monday.withTimeAtStartOfDay();
-        return mondayStart.toLocalDateTime();
+        Instant monday = today.plus(Duration.ofDays(dayOffset));
+        return midnight(monday);
     }
 
-    protected DateTime currentDateTime() {
-        return DateTime.now();
+    protected Instant midnight(Instant instant) {
+        return instant.with(ChronoField.NANO_OF_DAY, 0) ;
+    }
+
+    protected Instant currentDateTime() {
+        return Instant.now();
     }
 
 }

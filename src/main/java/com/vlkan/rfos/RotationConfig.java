@@ -26,6 +26,8 @@ public class RotationConfig {
 
     private final RotationCallback callback;
 
+    private final String encoding;
+
     private RotationConfig(Builder builder) {
         this.file = builder.file;
         this.filePattern = builder.filePattern;
@@ -35,6 +37,7 @@ public class RotationConfig {
         this.compress = builder.compress;
         this.clock = builder.clock;
         this.callback = builder.callback;
+        this.encoding = builder.encoding;
     }
 
     public File getFile() {
@@ -69,6 +72,8 @@ public class RotationConfig {
         return callback;
     }
 
+    public String getEncoding() { return encoding; }
+
     @Override
     public boolean equals(Object instance) {
         if (this == instance) return true;
@@ -81,12 +86,13 @@ public class RotationConfig {
                 Objects.equals(timer, that.timer) &&
                 Objects.equals(policies, that.policies) &&
                 Objects.equals(clock, that.clock) &&
-                Objects.equals(callback, that.callback);
+                Objects.equals(callback, that.callback) &&
+                Objects.equals(encoding, that.encoding);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(file, filePattern, timer, policies, append, compress, clock, callback);
+        return Objects.hash(file, filePattern, timer, policies, append, compress, clock, callback, encoding);
     }
 
     @Override
@@ -115,6 +121,8 @@ public class RotationConfig {
         private Clock clock = SystemClock.getInstance();
 
         private RotationCallback callback = LoggingRotationCallback.getInstance();
+
+        private String encoding = "UTF-8";
 
         private Builder() {
             // Do nothing.
@@ -178,6 +186,11 @@ public class RotationConfig {
             return this;
         }
 
+        public Builder encoding(String encoding) {
+            this.encoding = encoding;
+            return this;
+        }
+
         public RotationConfig build() {
             prepare();
             validate();
@@ -198,6 +211,7 @@ public class RotationConfig {
             }
             Objects.requireNonNull(clock, "clock");
             Objects.requireNonNull(callback, "callback");
+            Objects.requireNonNull(encoding, "encoding");
         }
 
     }

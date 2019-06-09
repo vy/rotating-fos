@@ -1,10 +1,8 @@
 package com.vlkan.rfos;
 
-import org.joda.time.LocalDateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-
 import java.io.File;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -22,7 +20,7 @@ public class RotatingFilePattern {
 
     private interface Field {
 
-        void render(StringBuilder builder, LocalDateTime dateTime);
+        void render(StringBuilder builder, Instant dateTime);
 
     }
 
@@ -35,7 +33,7 @@ public class RotatingFilePattern {
         }
 
         @Override
-        public void render(StringBuilder builder, LocalDateTime ignored) {
+        public void render(StringBuilder builder, Instant ignored) {
             builder.append(text);
         }
 
@@ -50,8 +48,8 @@ public class RotatingFilePattern {
         }
 
         @Override
-        public void render(StringBuilder builder, LocalDateTime dateTime) {
-            String formattedDateTime = dateTimeFormatter.print(dateTime);
+        public void render(StringBuilder builder, Instant dateTime) {
+            String formattedDateTime = dateTimeFormatter.format(dateTime);
             builder.append(formattedDateTime);
         }
 
@@ -118,7 +116,7 @@ public class RotatingFilePattern {
                                 String dateTimePattern = pattern.substring(blockStartIndex + 1, blockEndIndex);
                                 DateTimeFormatter dateTimeFormatter;
                                 try {
-                                    dateTimeFormatter = DateTimeFormat.forPattern(dateTimePattern).withLocale(locale);
+                                    dateTimeFormatter = DateTimeFormatter.ofPattern(dateTimePattern).withLocale(locale);
                                 } catch (Exception error) {
                                     String message = String.format(
                                             "invalid date time pattern (position=%d, pattern=%s, dateTimePattern=%s)",
@@ -165,7 +163,7 @@ public class RotatingFilePattern {
 
     }
 
-    public File create(LocalDateTime dateTime) {
+    public File create(Instant dateTime) {
         StringBuilder pathNameBuilder = new StringBuilder();
         for (Field field : fields) {
             field.render(pathNameBuilder, dateTime);

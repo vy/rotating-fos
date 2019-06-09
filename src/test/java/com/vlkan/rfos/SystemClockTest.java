@@ -1,9 +1,9 @@
 package com.vlkan.rfos;
 
-import org.joda.time.DateTime;
-import org.joda.time.LocalDateTime;
 import org.junit.Test;
 
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,7 +17,7 @@ public class SystemClockTest {
 
         abstract protected Map<String, List<String>> getCurrentDateTimeTextsByExpectedDateTimeText();
 
-        abstract protected LocalDateTime getActualDateTime(Clock clock);
+        abstract protected Instant getActualDateTime(Clock clock);
 
         @Override
         public void run() {
@@ -31,14 +31,14 @@ public class SystemClockTest {
         }
 
         private void testDateTime(String currentDateTimeText, String expectedDateTimeText) {
-            final DateTime currentDateTime = DateTime.parse(currentDateTimeText);
+            final Instant currentDateTime = Clock.parse(currentDateTimeText);
             SystemClock clock = new SystemClock() {
                 @Override
-                protected DateTime currentDateTime() {
+                protected Instant currentDateTime() {
                     return currentDateTime;
                 }
             };
-            LocalDateTime actualDateTime = getActualDateTime(clock);
+            Instant actualDateTime = getActualDateTime(clock);
             String actualDateTimeText = actualDateTime.toString();
             assertThat(actualDateTimeText)
                     .isEqualTo(expectedDateTimeText)
@@ -80,7 +80,7 @@ public class SystemClockTest {
             }
 
             @Override
-            protected LocalDateTime getActualDateTime(Clock clock) {
+            protected Instant getActualDateTime(Clock clock) {
                 return clock.midnight();
             }
 
@@ -121,7 +121,7 @@ public class SystemClockTest {
             }
 
             @Override
-            protected LocalDateTime getActualDateTime(Clock clock) {
+            protected Instant getActualDateTime(Clock clock) {
                 return clock.sundayMidnight();
             }
 

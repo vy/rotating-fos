@@ -2,13 +2,13 @@ package com.vlkan.rfos;
 
 import com.vlkan.rfos.policy.RotationPolicy;
 import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
-import org.joda.time.LocalDateTime;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -41,12 +41,12 @@ public class RotatingFileOutputStreamTest {
         private final RotationCallback callback = new RotationCallback() {
 
             @Override
-            public void onTrigger(RotationPolicy policy, LocalDateTime dateTime) {
+            public void onTrigger(RotationPolicy policy, Instant dateTime) {
                 LOGGER.trace("onTrigger({}, {})", policy, dateTime);
             }
 
             @Override
-            public void onSuccess(RotationPolicy policy, LocalDateTime dateTime, File file) {
+            public void onSuccess(RotationPolicy policy, Instant dateTime, File file) {
                 LOGGER.trace("onSuccess({}, {}, {})", policy, dateTime, file);
                 try {
                     callbackSuccessPolicies.put(policy);
@@ -58,7 +58,7 @@ public class RotatingFileOutputStreamTest {
             }
 
             @Override
-            public void onFailure(RotationPolicy policy, LocalDateTime dateTime, File file, Exception error) {
+            public void onFailure(RotationPolicy policy, Instant dateTime, File file, Exception error) {
                 LOGGER.trace("onFailure({}, {}, {}, {})", policy, dateTime, file, error);
             }
 
