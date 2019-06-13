@@ -1,5 +1,6 @@
-[![Build Status](https://secure.travis-ci.org/vy/rotating-fos.svg)](http://travis-ci.org/vy/rotating-fos)
+[![Build Status](https://travis-ci.org/vy/rotating-fos.svg)](https://travis-ci.org/vy/rotating-fos)
 [![Maven Central](https://img.shields.io/maven-central/v/com.vlkan.rfos/rotating-fos.svg)](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.vlkan.rfos%22)
+[![License](https://img.shields.io/github/license/vy/log4j2-logstash-layout.svg)](https://www.apache.org/licenses/LICENSE-2.0.txt)
 
 `rotating-fos` is a Java 8 library providing `RotatingFileOutputStream` which
 internally rotates an underlying `FileOutputStream` using provided rotation
@@ -102,14 +103,14 @@ the following methods:
 
 Copyright &copy; 2017-2019 [Volkan Yazıcı](https://vlkan.com/)
 
-rotating-fos is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-rotating-fos is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the GNU General Public License for more details.
+   https://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU General Public License along with
-this program. If not, see https://www.gnu.org/licenses/.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
