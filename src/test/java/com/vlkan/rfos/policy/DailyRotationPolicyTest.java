@@ -1,15 +1,10 @@
 package com.vlkan.rfos.policy;
 
-import com.vlkan.rfos.Clock;
-import com.vlkan.rfos.Rotatable;
-import com.vlkan.rfos.Rotatables;
-import com.vlkan.rfos.RotationConfig;
-import com.vlkan.rfos.RotatingFilePattern;
-import org.joda.time.LocalDateTime;
+import com.vlkan.rfos.*;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
@@ -26,29 +21,27 @@ public class DailyRotationPolicyTest {
     public void test() throws InterruptedException {
 
         // Create a timer.
-        BlockingQueue<String> timerDateTimeTexts = new LinkedBlockingDeque<>();
+        BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>();
         Timer timer = new Timer() {
             @Override
-            public void schedule(TimerTask task, Date date) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        String timerDateTimeText = LocalDateTime.fromDateFields(date).toString();
-                        try {
-                            timerDateTimeTexts.put(timerDateTimeText);
-                        } catch (InterruptedException ignored) {
-                            Thread.currentThread().interrupt();
-                        }
-                        task.run();
+            public void schedule(TimerTask task, long delayMillis) {
+                new Thread(() -> {
+                    try {
+                        timerDelays.put(delayMillis);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
                     }
+                    task.run();
                 }).start();
             }
         };
 
         // Setup the 1st clock tick.
         Clock clock = mock(Clock.class);
-        String midnight1Text = "2017-12-29T00:00:00.000";
-        when(clock.midnight()).thenReturn(LocalDateTime.parse(midnight1Text));
+        String midnight1Text = "2017-12-29T00:00:00.000Z";
+        Instant midnight1Instant = Instant.parse(midnight1Text);
+        when(clock.now()).thenReturn(midnight1Instant);
+        when(clock.midnight()).thenReturn(midnight1Instant);
 
         // Create the config.
         DailyRotationPolicy policy = DailyRotationPolicy.getInstance();
@@ -65,30 +58,32 @@ public class DailyRotationPolicyTest {
 
         // Create a rotatable.
         BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
-        BlockingQueue<String> rotationDateTimeTexts = new LinkedBlockingDeque<>(1);
-        Rotatable rotatable = Rotatables.createSpyingRotatable(config, rotationPolicies, rotationDateTimeTexts);
+        BlockingQueue<String> rotationInstantTexts = new LinkedBlockingDeque<>(1);
+        Rotatable rotatable = Rotatables.createSpyingRotatable(config, rotationPolicies, rotationInstantTexts);
 
         // Start policy. (Will consume the 1st clock tick.)
         policy.start(rotatable);
 
         // Setup the 2nd clock tick. (Will be consumed when we start draining from blocking queues.)
-        String midnight2Text = "2017-12-30T00:00:00.000";
-        when(clock.midnight()).thenReturn(LocalDateTime.parse(midnight2Text));
+        String midnight2Text = "2017-12-30T00:00:00.000Z";
+        Instant midnight2Instant = Instant.parse(midnight2Text);
+        when(clock.now()).thenReturn(midnight2Instant);
+        when(clock.midnight()).thenReturn(midnight2Instant);
 
         // Consume the 1st blocking queue entries.
-        String actualTimerDateTimeText1 = timerDateTimeTexts.poll(1, TimeUnit.SECONDS);
-        assertThat(actualTimerDateTimeText1).isEqualTo(midnight1Text);
+        Long timerDelay1 = timerDelays.poll(1, TimeUnit.SECONDS);
+        assertThat(timerDelay1).isEqualTo(0L);
         RotationPolicy rotationPolicy1 = rotationPolicies.poll(1, TimeUnit.SECONDS);
         assertThat(rotationPolicy1).isEqualTo(policy);
-        String rotationDateTimeText1 = rotationDateTimeTexts.poll(1, TimeUnit.SECONDS);
-        assertThat(rotationDateTimeText1).isEqualTo(midnight1Text);
+        String rotationInstantText1 = rotationInstantTexts.poll(1, TimeUnit.SECONDS);
+        assertThat(rotationInstantText1).isEqualTo(midnight1Text);
 
         // Consume the 2nd blocking queue entries.
-        String actualTimerDateTimeText2 = timerDateTimeTexts.poll(1, TimeUnit.SECONDS);
-        assertThat(actualTimerDateTimeText2).isEqualTo(midnight2Text);
+        Long timerDelay2 = timerDelays.poll(1, TimeUnit.SECONDS);
+        assertThat(timerDelay2).isEqualTo(0L);
         RotationPolicy rotationPolicy2 = rotationPolicies.poll(1, TimeUnit.SECONDS);
         assertThat(rotationPolicy2).isEqualTo(policy);
-        String rotationDateTimeText2 = rotationDateTimeTexts.poll(1, TimeUnit.SECONDS);
+        String rotationDateTimeText2 = rotationInstantTexts.poll(1, TimeUnit.SECONDS);
         assertThat(rotationDateTimeText2).isEqualTo(midnight2Text);
 
     }

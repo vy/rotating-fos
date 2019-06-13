@@ -1,13 +1,14 @@
 package com.vlkan.rfos;
 
-import org.joda.time.DateTime;
-import org.joda.time.LocalDateTime;
+import java.time.*;
 
 public class SystemClock implements Clock {
 
     private static final SystemClock INSTANCE = new SystemClock();
 
-    protected SystemClock() {
+    private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
+
+    SystemClock() {
         // Do nothing.
     }
 
@@ -16,27 +17,31 @@ public class SystemClock implements Clock {
     }
 
     @Override
-    public LocalDateTime now() {
-        return LocalDateTime.now();
+    public Instant now() {
+        return Instant.now();
     }
 
     @Override
-    public LocalDateTime midnight() {
-        return currentDateTime().plusDays(1).withTimeAtStartOfDay().toLocalDateTime();
+    public Instant midnight() {
+        Instant instant = now();
+        ZonedDateTime utcInstant = instant.atZone(UTC_ZONE_ID);
+        return LocalDate
+                .from(utcInstant)
+                .atStartOfDay()
+                .plusDays(1)
+                .toInstant(ZoneOffset.UTC);
     }
 
     @Override
-    public LocalDateTime sundayMidnight() {
-        DateTime today = currentDateTime();
-        int dayIndex = today.getDayOfWeek() - 1;
-        int dayOffset = 7 - dayIndex;
-        DateTime monday = today.plusDays(dayOffset);
-        DateTime mondayStart = monday.withTimeAtStartOfDay();
-        return mondayStart.toLocalDateTime();
-    }
-
-    protected DateTime currentDateTime() {
-        return DateTime.now();
+    public Instant sundayMidnight() {
+        Instant instant = now();
+        ZonedDateTime utcInstant = instant.atZone(UTC_ZONE_ID);
+        LocalDateTime todayStart = LocalDate.from(utcInstant).atStartOfDay();
+        int todayIndex = todayStart.getDayOfWeek().getValue() - 1;
+        int sundayOffset = 7 - todayIndex;
+        return todayStart
+                .plusDays(sundayOffset)
+                .toInstant(ZoneOffset.UTC);
     }
 
 }

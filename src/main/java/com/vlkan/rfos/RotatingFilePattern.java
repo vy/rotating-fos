@@ -1,14 +1,10 @@
 package com.vlkan.rfos;
 
-import org.joda.time.LocalDateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-
 import java.io.File;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public class RotatingFilePattern {
 
@@ -22,7 +18,7 @@ public class RotatingFilePattern {
 
     private interface Field {
 
-        void render(StringBuilder builder, LocalDateTime dateTime);
+        void render(StringBuilder builder, Instant instant);
 
     }
 
@@ -35,7 +31,7 @@ public class RotatingFilePattern {
         }
 
         @Override
-        public void render(StringBuilder builder, LocalDateTime ignored) {
+        public void render(StringBuilder builder, Instant ignored) {
             builder.append(text);
         }
 
@@ -50,8 +46,8 @@ public class RotatingFilePattern {
         }
 
         @Override
-        public void render(StringBuilder builder, LocalDateTime dateTime) {
-            String formattedDateTime = dateTimeFormatter.print(dateTime);
+        public void render(StringBuilder builder, Instant instant) {
+            String formattedDateTime = dateTimeFormatter.format(instant);
             builder.append(formattedDateTime);
         }
 
@@ -61,21 +57,18 @@ public class RotatingFilePattern {
 
     private final Locale locale;
 
+    private final ZoneId timeZoneId;
+
     private final List<Field> fields;
 
-    public RotatingFilePattern(String pattern) {
-        this.pattern = pattern;
-        this.locale = Locale.getDefault();
-        this.fields = readPattern(pattern, locale);
+    private RotatingFilePattern(Builder builder) {
+        this.pattern = builder.pattern;
+        this.locale = builder.locale;
+        this.timeZoneId = builder.timeZoneId;
+        this.fields = readPattern(pattern, locale, timeZoneId);
     }
 
-    public RotatingFilePattern(String pattern, Locale locale) {
-        this.pattern = pattern;
-        this.locale = locale;
-        this.fields = readPattern(pattern, locale);
-    }
-
-    private static List<Field> readPattern(String pattern, Locale locale) {
+    private static List<Field> readPattern(String pattern, Locale locale, ZoneId timeZoneId) {
 
         List<Field> fields = new LinkedList<>();
         StringBuilder textBuilder = new StringBuilder();
@@ -118,7 +111,10 @@ public class RotatingFilePattern {
                                 String dateTimePattern = pattern.substring(blockStartIndex + 1, blockEndIndex);
                                 DateTimeFormatter dateTimeFormatter;
                                 try {
-                                    dateTimeFormatter = DateTimeFormat.forPattern(dateTimePattern).withLocale(locale);
+                                    dateTimeFormatter = DateTimeFormatter
+                                            .ofPattern(dateTimePattern)
+                                            .withLocale(locale)
+                                            .withZone(timeZoneId);
                                 } catch (Exception error) {
                                     String message = String.format(
                                             "invalid date time pattern (position=%d, pattern=%s, dateTimePattern=%s)",
@@ -165,10 +161,10 @@ public class RotatingFilePattern {
 
     }
 
-    public File create(LocalDateTime dateTime) {
+    public File create(Instant instant) {
         StringBuilder pathNameBuilder = new StringBuilder();
         for (Field field : fields) {
-            field.render(pathNameBuilder, dateTime);
+            field.render(pathNameBuilder, instant);
         }
         String pathName = pathNameBuilder.toString();
         return new File(pathName);
@@ -182,23 +178,70 @@ public class RotatingFilePattern {
         return locale;
     }
 
+    public ZoneId getTimeZoneId() {
+        return timeZoneId;
+    }
+
     @Override
     public boolean equals(Object instance) {
         if (this == instance) return true;
         if (instance == null || getClass() != instance.getClass()) return false;
         RotatingFilePattern that = (RotatingFilePattern) instance;
         return Objects.equals(pattern, that.pattern) &&
-                Objects.equals(locale, that.locale);
+                Objects.equals(locale, that.locale) &&
+                Objects.equals(timeZoneId, that.timeZoneId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(pattern, locale);
+        return Objects.hash(pattern, locale, timeZoneId);
     }
 
     @Override
     public String toString() {
-        return String.format("RotatingFilePattern{pattern=%s, locale=%s}", pattern, locale);
+        return String.format("RotatingFilePattern{pattern=%s, locale=%s, timeZoneId=%s}", pattern, locale, timeZoneId);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+
+        private String pattern;
+
+        private Locale locale = Locale.getDefault();
+
+        private ZoneId timeZoneId = TimeZone.getDefault().toZoneId();
+
+        private Builder() {}
+
+        public Builder pattern(String pattern) {
+            this.pattern = pattern;
+            return this;
+        }
+
+        public Builder locale(Locale locale) {
+            this.locale = locale;
+            return this;
+        }
+
+        public Builder timeZoneId(ZoneId timeZoneId) {
+            this.timeZoneId = timeZoneId;
+            return this;
+        }
+
+        public RotatingFilePattern build() {
+            validate();
+            return new RotatingFilePattern(this);
+        }
+
+        private void validate() {
+            Objects.requireNonNull(pattern, "file");
+            Objects.requireNonNull(locale, "locale");
+            Objects.requireNonNull(timeZoneId, "timeZoneId");
+        }
+
     }
 
 }

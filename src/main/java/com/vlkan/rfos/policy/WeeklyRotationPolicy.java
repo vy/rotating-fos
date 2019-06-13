@@ -1,9 +1,10 @@
 package com.vlkan.rfos.policy;
 
 import com.vlkan.rfos.Clock;
-import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Instant;
 
 public class WeeklyRotationPolicy extends TimeBasedRotationPolicy {
 
@@ -20,7 +21,7 @@ public class WeeklyRotationPolicy extends TimeBasedRotationPolicy {
     }
 
     @Override
-    public LocalDateTime getTriggerDateTime(Clock clock) {
+    public Instant getTriggerInstant(Clock clock) {
         return clock.sundayMidnight();
     }
 

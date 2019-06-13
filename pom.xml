@@ -25,7 +25,7 @@
             <name>Volkan Yazıcı</name>
             <email>volkan.yazici@gmail.com</email>
             <organization>Volkan Yazıcı's Soap Co.</organization>
-            <organizationUrl>http://vlkan.com/</organizationUrl>
+            <organizationUrl>https://vlkan.com/</organizationUrl>
             <roles>
                 <role>Project-Administrator</role>
                 <role>Developer</role>
@@ -35,7 +35,7 @@
     </developers>
 
     <scm>
-        <url>http://github.com/vy/rotating-fos</url>
+        <url>https://github.com/vy/rotating-fos</url>
         <connection>scm:git:git@github.com:vy/rotating-fos.git</connection>
         <developerConnection>scm:git:git@github.com:vy/rotating-fos.git</developerConnection>
         <tag>HEAD</tag>
@@ -62,7 +62,6 @@
 
         <!-- library versions -->
         <assertj-core.version>2.7.0</assertj-core.version>
-        <joda-time.version>2.9.9</joda-time.version>
         <junit.version>4.11</junit.version>
         <logback.version>1.2.3</logback.version>
         <mockito.version>2.13.0</mockito.version>
@@ -83,12 +82,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>${joda-time.version}</version>
         </dependency>
 
         <dependency>

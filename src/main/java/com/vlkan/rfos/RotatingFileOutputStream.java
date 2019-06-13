@@ -1,11 +1,11 @@
 package com.vlkan.rfos;
 
 import com.vlkan.rfos.policy.RotationPolicy;
-import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.time.Instant;
 import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
@@ -57,17 +57,17 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     @Override
-    public void rotate(RotationPolicy policy, LocalDateTime dateTime) {
+    public void rotate(RotationPolicy policy, Instant instant) {
         try {
-            unsafeRotate(policy, dateTime);
+            unsafeRotate(policy, instant);
         } catch (Exception error) {
-            String message = String.format("rotation failure {dateTime=%s}", dateTime);
+            String message = String.format("rotation failure {instant=%s}", instant);
             RuntimeException extendedError = new RuntimeException(message, error);
-            config.getCallback().onFailure(policy, dateTime, null, extendedError);
+            config.getCallback().onFailure(policy, instant, null, extendedError);
         }
     }
 
-    private void unsafeRotate(RotationPolicy policy, LocalDateTime dateTime) throws Exception {
+    private void unsafeRotate(RotationPolicy policy, Instant instant) throws Exception {
 
         File rotatedFile;
         synchronized (this) {
@@ -79,13 +79,13 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
             }
 
             // Rename the file.
-            rotatedFile = config.getFilePattern().create(dateTime).getAbsoluteFile();
+            rotatedFile = config.getFilePattern().create(instant).getAbsoluteFile();
             LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
             boolean renamed = config.getFile().renameTo(rotatedFile);
             if (!renamed) {
                 String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
                 IOException error = new IOException(message);
-                config.getCallback().onFailure(policy, dateTime, rotatedFile, error);
+                config.getCallback().onFailure(policy, instant, rotatedFile, error);
                 return;
             }
 
@@ -100,16 +100,16 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
         // Compress the old file, if necessary.
         if (config.isCompress()) {
-            asyncCompress(policy, dateTime, rotatedFile, config.getCallback());
+            asyncCompress(policy, instant, rotatedFile, config.getCallback());
             return;
         }
 
         // So far, so good;
-        config.getCallback().onSuccess(policy, dateTime, rotatedFile);
+        config.getCallback().onSuccess(policy, instant, rotatedFile);
 
     }
 
-    private void asyncCompress(RotationPolicy policy, LocalDateTime dateTime, File rotatedFile, RotationCallback callback) {
+    private void asyncCompress(RotationPolicy policy, Instant instant, File rotatedFile, RotationCallback callback) {
         String threadName = String.format("%s.compress(%s)", RotatingFileOutputStream.class.getSimpleName(), rotatedFile);
         Runnable threadTask = () -> {
             Thread thread = Thread.currentThread();
@@ -117,13 +117,13 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
             File compressedFile = getCompressedFile(rotatedFile);
             try {
                 unsafeSyncCompress(rotatedFile, compressedFile);
-                callback.onSuccess(policy, dateTime, compressedFile);
+                callback.onSuccess(policy, instant, compressedFile);
             } catch (Exception error) {
                 String message = String.format(
-                        "compression failure {dateTime=%s, rotatedFile=%s, compressedFile=%s}",
-                        dateTime, rotatedFile, compressedFile);
+                        "compression failure {instant=%s, rotatedFile=%s, compressedFile=%s}",
+                        instant, rotatedFile, compressedFile);
                 RuntimeException extendedError = new RuntimeException(message, error);
-                callback.onFailure(policy, dateTime, rotatedFile, extendedError);
+                callback.onFailure(policy, instant, rotatedFile, extendedError);
             } finally {
                 runningThreads.remove(thread);
             }

@@ -2,12 +2,12 @@ package com.vlkan.rfos.policy;
 
 import com.vlkan.rfos.Rotatable;
 import com.vlkan.rfos.RotationConfig;
-import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.TimerTask;
 
@@ -53,8 +53,8 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
     @Override
     public void acceptWrite(long byteCount) {
         if (byteCount > maxByteCount) {
-            LocalDateTime now = rotatable.getConfig().getClock().now();
-            rotate(now, byteCount, rotatable);
+            Instant instant = rotatable.getConfig().getClock().now();
+            rotate(instant, byteCount, rotatable);
         }
     }
 
@@ -74,7 +74,7 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
             public void run() {
 
                 // Get file size.
-                LocalDateTime now = config.getClock().now();
+                Instant instant = config.getClock().now();
                 File file = config.getFile();
                 long byteCount;
                 try {
@@ -82,23 +82,23 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
                 } catch (Exception error) {
                     String message = String.format("failed accessing file size {file=%s}", file);
                     Exception extendedError = new IOException(message, error);
-                    config.getCallback().onFailure(SizeBasedRotationPolicy.this, now, file, extendedError);
+                    config.getCallback().onFailure(SizeBasedRotationPolicy.this, instant, file, extendedError);
                     return;
                 }
 
                 // Rotate if necessary.
                 if (byteCount > maxByteCount) {
-                    rotate(now, byteCount, rotatable);
+                    rotate(instant, byteCount, rotatable);
                 }
 
             }
         };
     }
 
-    private void rotate(LocalDateTime now, long byteCount, Rotatable rotatable) {
+    private void rotate(Instant instant, long byteCount, Rotatable rotatable) {
         LOGGER.debug("triggering {byteCount={}}", byteCount);
-        rotatable.getConfig().getCallback().onTrigger(SizeBasedRotationPolicy.this, now);
-        rotatable.rotate(SizeBasedRotationPolicy.this, now);
+        rotatable.getConfig().getCallback().onTrigger(SizeBasedRotationPolicy.this, instant);
+        rotatable.rotate(SizeBasedRotationPolicy.this, instant);
     }
 
     @Override

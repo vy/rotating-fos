@@ -1,13 +1,13 @@
 package com.vlkan.rfos;
 
-import org.joda.time.LocalDateTime;
+import java.time.Instant;
 
 public interface Clock {
 
-    LocalDateTime now();
+    Instant now();
 
-    LocalDateTime midnight();
+    Instant midnight();
 
-    LocalDateTime sundayMidnight();
+    Instant sundayMidnight();
 
 }

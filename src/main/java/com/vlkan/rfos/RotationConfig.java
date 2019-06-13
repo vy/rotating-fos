@@ -136,7 +136,7 @@ public class RotationConfig {
         }
 
         public Builder filePattern(String filePattern) {
-            this.filePattern = new RotatingFilePattern(filePattern);
+            this.filePattern = RotatingFilePattern.builder().pattern(filePattern).build();
             return this;
         }
 

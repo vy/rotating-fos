@@ -2,13 +2,15 @@ package com.vlkan.rfos;
 
 import com.vlkan.rfos.policy.RotationPolicy;
 import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
-import org.joda.time.LocalDateTime;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -21,6 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class RotatingFileOutputStreamTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RotatingFileOutputStreamTest.class);
+
+    @Rule
+    public TemporaryFolder tmpDir = new TemporaryFolder();
 
     @Test
     public void test_write_insensitive_policy() throws Exception {
@@ -41,13 +46,13 @@ public class RotatingFileOutputStreamTest {
         private final RotationCallback callback = new RotationCallback() {
 
             @Override
-            public void onTrigger(RotationPolicy policy, LocalDateTime dateTime) {
-                LOGGER.trace("onTrigger({}, {})", policy, dateTime);
+            public void onTrigger(RotationPolicy policy, Instant instant) {
+                LOGGER.trace("onTrigger({}, {})", policy, instant);
             }
 
             @Override
-            public void onSuccess(RotationPolicy policy, LocalDateTime dateTime, File file) {
-                LOGGER.trace("onSuccess({}, {}, {})", policy, dateTime, file);
+            public void onSuccess(RotationPolicy policy, Instant instant, File file) {
+                LOGGER.trace("onSuccess({}, {}, {})", policy, instant, file);
                 try {
                     callbackSuccessPolicies.put(policy);
                     callbackSuccessFiles.put(file);
@@ -58,8 +63,8 @@ public class RotatingFileOutputStreamTest {
             }
 
             @Override
-            public void onFailure(RotationPolicy policy, LocalDateTime dateTime, File file, Exception error) {
-                LOGGER.trace("onFailure({}, {}, {}, {})", policy, dateTime, file, error);
+            public void onFailure(RotationPolicy policy, Instant instant, File file, Exception error) {
+                LOGGER.trace("onFailure({}, {}, {}, {})", policy, instant, file, error);
             }
 
         };
@@ -70,16 +75,11 @@ public class RotatingFileOutputStreamTest {
 
         // Set file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(Filesystem.tmpDir(), className + ".log");
+        File file = new File(tmpDir.getRoot(), className + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(Filesystem.tmpDir(), className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
         String rotatedFileNameSuffix = compress ? ".gz" : "";
         File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))) + rotatedFileNameSuffix);
-        String rotatedFileName = rotatedFile.getAbsolutePath();
-
-        // Cleanup files.
-        Filesystem.delete(fileName);
-        Filesystem.delete(rotatedFileName);
 
         // Create the timer which is advanced by permits in a queue.
         @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -224,15 +224,10 @@ public class RotatingFileOutputStreamTest {
 
         // Set file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(Filesystem.tmpDir(), className + ".log");
+        File file = new File(tmpDir.getRoot(), className + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(Filesystem.tmpDir(), className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
         File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))));
-        String rotatedFileName = rotatedFile.getAbsolutePath();
-
-        // Cleanup files.
-        Filesystem.delete(fileName);
-        Filesystem.delete(rotatedFileName);
 
         // Create the stream.
         int maxByteCount = 1024;
@@ -289,15 +284,9 @@ public class RotatingFileOutputStreamTest {
 
         // Set file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(Filesystem.tmpDir(), className + ".log");
+        File file = new File(tmpDir.getRoot(), className + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(Filesystem.tmpDir(), className + "-%d{yyyy}.log").getAbsolutePath();
-        File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))));
-        String rotatedFileName = rotatedFile.getAbsolutePath();
-
-        // Cleanup files.
-        Filesystem.delete(fileName);
-        Filesystem.delete(rotatedFileName);
+        String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
 
         // Create the stream.
         int maxByteCount = 1024;

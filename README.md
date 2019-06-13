@@ -42,10 +42,9 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 | Method(s) | Default | Description |
 | --------- | ------- | ----------- |
 | `file(File)`<br/>`file(String)` | N/A | file accessed (e.g., `/tmp/app.log`) |
-| `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| N/A | rotated file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
+| `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| N/A | rotating file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
 | `policy(RotationPolicy)`<br/>`policies(Set<RotationPolicy> policies)` | N/A | rotation policies |
 | `timer(Timer)` | `Timer` | timer for scheduling policies |
-| `lock(ReadWriteLock)` | `ReentrantReadWriteLock` | lock for synchronizing stream access (incl. rotations) |
 | `append(boolean)` | `true` | append while opening the `file` |
 | `compress(boolean)` | `false` | GZIP compression after rotation |
 | `clock(Clock)` | `SystemClock` | clock for retrieving date and time |
@@ -67,6 +66,14 @@ the following methods:
 | `RotationConfig getConfig()` | used configuration |
 | `List<Thread> getRunningThreads()` | compression threads running in the background |
 
+`RotatingFilePattern.Builder` supports the following methods:
+
+| Method | Default | Description |
+| ------ | ------- | ----------- |
+| `pattern(String)` | N/A | rotating file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
+| `locale(Locale)` | `Locale.getDefault()` | `Locale` used in the `DateTimeFormatter` |
+| `timeZoneId(ZoneId)` | `TimeZone.getDefault().toZoneId()` | `ZoneId` denoting the time zone used in the `DateTimeFormatter` |
+
 # Caveats
 
 - **Rotated file conflicts are not resolved by `rotating-fos`.** Once a
@@ -87,13 +94,13 @@ the following methods:
 
 # Contributors
 
-- [Jonas (yawkat) Konrad](http://yawk.at/) (`RotatingFileOutputStream`
+- [Jonas (yawkat) Konrad](https://yawk.at/) (`RotatingFileOutputStream`
   thread-safety improvements)
 - [Lukas Bradley](https://github.com/lukasbradley/)
 
 # License
 
-Copyright &copy; 2017 [Volkan Yazıcı](http://vlkan.com/)
+Copyright &copy; 2017-2019 [Volkan Yazıcı](https://vlkan.com/)
 
 rotating-fos is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -105,4 +112,4 @@ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
-this program. If not, see http://www.gnu.org/licenses/.
+this program. If not, see https://www.gnu.org/licenses/.

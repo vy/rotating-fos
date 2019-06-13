@@ -1,16 +1,16 @@
 package com.vlkan.rfos;
 
 import com.vlkan.rfos.policy.RotationPolicy;
-import org.joda.time.LocalDateTime;
 
 import java.io.File;
+import java.time.Instant;
 
 public interface RotationCallback {
 
-    void onTrigger(RotationPolicy policy, LocalDateTime dateTime);
+    void onTrigger(RotationPolicy policy, Instant instant);
 
-    void onSuccess(RotationPolicy policy, LocalDateTime dateTime, File file);
+    void onSuccess(RotationPolicy policy, Instant instant, File file);
 
-    void onFailure(RotationPolicy policy, LocalDateTime dateTime, File file, Exception error);
+    void onFailure(RotationPolicy policy, Instant instant, File file, Exception error);
 
 }

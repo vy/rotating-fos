@@ -1,14 +1,10 @@
 package com.vlkan.rfos.policy;
 
-import com.vlkan.rfos.Clock;
-import com.vlkan.rfos.Rotatable;
-import com.vlkan.rfos.Rotatables;
-import com.vlkan.rfos.RotationConfig;
-import com.vlkan.rfos.RotatingFilePattern;
-import org.joda.time.LocalDateTime;
+import com.vlkan.rfos.*;
 import org.junit.Test;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
@@ -31,27 +27,24 @@ public class SizeBasedRotationPolicyTest {
         Timer timer = new Timer() {
             @Override
             public void schedule(TimerTask task, long delay, long period) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        boolean first = true;
-                        while (true) {
+                new Thread(() -> {
+                    boolean first = true;
+                    while (true) {
+                        try {
+                            timerTaskExecutionPermits.poll(1, TimeUnit.SECONDS);
+                        } catch (InterruptedException ignored) {
+                            Thread.currentThread().interrupt();
+                        }
+                        if (first) {
+                            first = false;
                             try {
-                                timerTaskExecutionPermits.poll(1, TimeUnit.SECONDS);
+                                timerDelays.put(delay);
+                                timerPeriods.put(period);
                             } catch (InterruptedException ignored) {
                                 Thread.currentThread().interrupt();
                             }
-                            if (first) {
-                                first = false;
-                                try {
-                                    timerDelays.put(delay);
-                                    timerPeriods.put(period);
-                                } catch (InterruptedException ignored) {
-                                    Thread.currentThread().interrupt();
-                                }
-                            }
-                            task.run();
                         }
+                        task.run();
                     }
                 }).start();
             }
@@ -75,15 +68,15 @@ public class SizeBasedRotationPolicyTest {
 
         // Create a rotatable.
         BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
-        BlockingQueue<String> rotationDateTimeTexts = new LinkedBlockingDeque<>(1);
-        Rotatable rotatable = Rotatables.createSpyingRotatable(config, rotationPolicies, rotationDateTimeTexts);
+        BlockingQueue<String> rotationInstantTexts = new LinkedBlockingDeque<>(1);
+        Rotatable rotatable = Rotatables.createSpyingRotatable(config, rotationPolicies, rotationInstantTexts);
 
         // Start policy. (Will consume the 1st clock tick.)
         policy.start(rotatable);
 
         // Setup the 1st clock tick.
-        String now1Text = "2017-12-31T00:00:00.000";
-        when(clock.now()).thenReturn(LocalDateTime.parse(now1Text));
+        String now1Text = "2017-12-31T00:00:00.000Z";
+        when(clock.now()).thenReturn(Instant.parse(now1Text));
 
         // Setup the 1st file length probe.
         when(file.length()).thenReturn(1024L);
@@ -98,8 +91,8 @@ public class SizeBasedRotationPolicyTest {
         assertThat(timerPeriod1).isEqualTo(checkIntervalMillis);
         RotationPolicy rotationPolicy1 = rotationPolicies.peek();
         assertThat(rotationPolicy1).isNull();
-        String rotationDateTimeText1 = rotationDateTimeTexts.peek();
-        assertThat(rotationDateTimeText1).isNull();
+        String rotationInstantText1 = rotationInstantTexts.peek();
+        assertThat(rotationInstantText1).isNull();
 
         // Setup the 2nd file length probe.
         when(file.length()).thenReturn(maxByteCount + 1);
@@ -110,8 +103,8 @@ public class SizeBasedRotationPolicyTest {
         // Consume the 2nd blocking queue entries.
         RotationPolicy rotationPolicy2 = rotationPolicies.poll(1, TimeUnit.SECONDS);
         assertThat(rotationPolicy2).isEqualTo(policy);
-        String rotationDateTimeText2 = rotationDateTimeTexts.poll(1, TimeUnit.SECONDS);
-        assertThat(rotationDateTimeText2).isEqualTo(now1Text);
+        String rotationInstantText2 = rotationInstantTexts.poll(1, TimeUnit.SECONDS);
+        assertThat(rotationInstantText2).isEqualTo(now1Text);
 
     }
 

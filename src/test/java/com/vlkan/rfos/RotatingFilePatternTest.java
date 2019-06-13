@@ -1,12 +1,13 @@
 package com.vlkan.rfos;
 
 import org.assertj.core.api.ThrowableAssert;
-import org.joda.time.LocalDateTime;
-import org.joda.time.format.DateTimeFormat;
 import org.junit.Test;
 
 import java.io.File;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,7 +32,12 @@ public class RotatingFilePatternTest {
                 "foo%%"
         };
         for (String invalidPattern : invalidPatterns) {
-            ThrowableAssert.ThrowingCallable callable = () -> new RotatingFilePattern(invalidPattern);
+            ThrowableAssert.ThrowingCallable callable = () -> RotatingFilePattern
+                    .builder()
+                    .pattern(invalidPattern)
+                    .locale(Locale.US)
+                    .timeZoneId(UtcHelper.ZONE_ID)
+                    .build();
             assertThatThrownBy(callable)
                     .as("pattern=%s", invalidPattern)
                     .isInstanceOf(RotatingFilePatternException.class);
@@ -40,24 +46,37 @@ public class RotatingFilePatternTest {
 
     @Test
     public void test_valid_patterns() {
-        LocalDateTime dateTime = LocalDateTime.now();
+        Instant instant = Instant.now();
         Map<String, File> fileByPattern = new LinkedHashMap<>();
-        fileByPattern.put("%d{yyyy-mm-dd}", new File(DateTimeFormat.forPattern("yyyy-mm-dd").print(dateTime)));
-        fileByPattern.put("%d{yyyy-mm-dd}.log/foo%%", new File(String.format("%s.log/foo%%", DateTimeFormat.forPattern("yyyy-mm-dd").print(dateTime))));
-        fileByPattern.put("tmp/%d{yyyymmdd-HH}", new File(String.format("tmp/%s", DateTimeFormat.forPattern("yyyymmdd-HH").print(dateTime))));
-        fileByPattern.put("/tmp/%d{yyyymmdd-HH}", new File(String.format("/tmp/%s", DateTimeFormat.forPattern("yyyymmdd-HH").print(dateTime))));
+        fileByPattern.put("%d{yyyy-MM-dd}", new File(formatInstant("yyyy-MM-dd", instant)));
+        fileByPattern.put("%d{yyyy-MM-dd}.log/foo%%", new File(String.format("%s.log/foo%%", formatInstant("yyyy-MM-dd", instant))));
+        fileByPattern.put("tmp/%d{yyyyMMdd-HH}", new File(String.format("tmp/%s", formatInstant("yyyyMMdd-HH", instant))));
+        fileByPattern.put("/tmp/%d{yyyyMMdd-HH}", new File(String.format("/tmp/%s", formatInstant("yyyyMMdd-HH", instant))));
         fileByPattern.put(
-                "%d{yyyy}/%d{mm}/%d{yyyymmdd}.log",
+                "%d{yyyy}/%d{MM}/%d{yyyyMMdd}.log",
                 new File(String.format(
                         "%s/%s/%s.log",
-                        DateTimeFormat.forPattern("yyyy").print(dateTime),
-                        DateTimeFormat.forPattern("mm").print(dateTime),
-                        DateTimeFormat.forPattern("yyyymmdd").print(dateTime))));
+                        formatInstant("yyyy", instant),
+                        formatInstant("MM", instant),
+                        formatInstant("yyyyMMdd", instant))));
         for (String pattern : fileByPattern.keySet()) {
             File expectedFile = fileByPattern.get(pattern);
-            File actualFile = new RotatingFilePattern(pattern).create(dateTime);
+            File actualFile = RotatingFilePattern
+                    .builder()
+                    .pattern(pattern)
+                    .locale(Locale.US)
+                    .timeZoneId(UtcHelper.ZONE_ID)
+                    .build()
+                    .create(instant);
             assertThat(actualFile).as("pattern=%s", pattern).isEqualTo(expectedFile);
         }
+    }
+
+    private static String formatInstant(String pattern, Instant instant) {
+        return DateTimeFormatter
+                .ofPattern(pattern)
+                .withZone(UtcHelper.ZONE_ID)
+                .format(instant);
     }
 
 }
