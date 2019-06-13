@@ -67,8 +67,8 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
         }
     }
 
-    private TimerTask createTimerTask(final Rotatable rotatable) {
-        final RotationConfig config = rotatable.getConfig();
+    private TimerTask createTimerTask(Rotatable rotatable) {
+        RotationConfig config = rotatable.getConfig();
         return new TimerTask() {
             @Override
             public void run() {

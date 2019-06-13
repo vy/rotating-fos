@@ -1,7 +1,7 @@
 [![Build Status](https://secure.travis-ci.org/vy/rotating-fos.svg)](http://travis-ci.org/vy/rotating-fos)
 [![Maven Central](https://img.shields.io/maven-central/v/com.vlkan.rfos/rotating-fos.svg)](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.vlkan.rfos%22)
 
-`rotating-fos` is a Java 7 library providing `RotatingFileOutputStream` which
+`rotating-fos` is a Java 8 library providing `RotatingFileOutputStream` which
 internally rotates an underlying `FileOutputStream` using provided rotation
 policies similar to [Log4j](https://logging.apache.org/log4j/) or
 [Logback](https://logback.qos.ch/).

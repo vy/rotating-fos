@@ -30,13 +30,8 @@ public class RotatingFilePatternTest {
                 "foo%d{T}",
                 "foo%%"
         };
-        for (final String invalidPattern : invalidPatterns) {
-            ThrowableAssert.ThrowingCallable callable = new ThrowableAssert.ThrowingCallable() {
-                @Override
-                public void call() throws Throwable {
-                    new RotatingFilePattern(invalidPattern);
-                }
-            };
+        for (String invalidPattern : invalidPatterns) {
+            ThrowableAssert.ThrowingCallable callable = () -> new RotatingFilePattern(invalidPattern);
             assertThatThrownBy(callable)
                     .as("pattern=%s", invalidPattern)
                     .isInstanceOf(RotatingFilePatternException.class);

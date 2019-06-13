@@ -83,53 +83,50 @@ public class RotatingFileOutputStreamTest {
 
         // Create the timer which is advanced by permits in a queue.
         @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-        final BlockingQueue<Object> timerTaskExecutionPermits = new LinkedBlockingDeque<>();
-        final BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>(1);
-        final BlockingQueue<Long> timerPeriods = new LinkedBlockingDeque<>(1);
-        final BlockingQueue<Integer> timerTaskExecutionCounts = new LinkedBlockingDeque<>(1);
+        BlockingQueue<Object> timerTaskExecutionPermits = new LinkedBlockingDeque<>();
+        BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>(1);
+        BlockingQueue<Long> timerPeriods = new LinkedBlockingDeque<>(1);
+        BlockingQueue<Integer> timerTaskExecutionCounts = new LinkedBlockingDeque<>(1);
         Timer timer = new Timer() {
             @Override
-            public void schedule(final TimerTask task, final long delay, final long period) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int executionCount = 0;
-                        boolean first = true;
-                        Thread thread = Thread.currentThread();
-                        while (true) {
+            public void schedule(TimerTask task, long delay, long period) {
+                new Thread(() -> {
+                    int executionCount = 0;
+                    boolean first = true;
+                    Thread thread = Thread.currentThread();
+                    while (true) {
 
-                            LOGGER.trace("awaiting task execution permit");
-                            try {
-                                timerTaskExecutionPermits.poll(1, TimeUnit.SECONDS);
-                            } catch (InterruptedException ignored) {
-                                LOGGER.warn("task execution permit await is interrupted");
-                                thread.interrupt();
-                            }
-
-                            if (first) {
-                                LOGGER.trace("executing task for the first time");
-                                first = false;
-                                try {
-                                    timerDelays.put(delay);
-                                    timerPeriods.put(period);
-                                } catch (InterruptedException ignored) {
-                                    LOGGER.warn("timer delay & period push is interrupted");
-                                    thread.interrupt();
-                                }
-                            } else {
-                                LOGGER.trace("executing task");
-                            }
-                            task.run();
-
-                            LOGGER.trace("pushing task execution count");
-                            try {
-                                timerTaskExecutionCounts.put(++executionCount);
-                            } catch (InterruptedException ignored) {
-                                LOGGER.warn("timer task execution count push is interrupted");
-                                thread.interrupt();
-                            }
-
+                        LOGGER.trace("awaiting task execution permit");
+                        try {
+                            timerTaskExecutionPermits.poll(1, TimeUnit.SECONDS);
+                        } catch (InterruptedException ignored) {
+                            LOGGER.warn("task execution permit await is interrupted");
+                            thread.interrupt();
                         }
+
+                        if (first) {
+                            LOGGER.trace("executing task for the first time");
+                            first = false;
+                            try {
+                                timerDelays.put(delay);
+                                timerPeriods.put(period);
+                            } catch (InterruptedException ignored) {
+                                LOGGER.warn("timer delay & period push is interrupted");
+                                thread.interrupt();
+                            }
+                        } else {
+                            LOGGER.trace("executing task");
+                        }
+                        task.run();
+
+                        LOGGER.trace("pushing task execution count");
+                        try {
+                            timerTaskExecutionCounts.put(++executionCount);
+                        } catch (InterruptedException ignored) {
+                            LOGGER.warn("timer task execution count push is interrupted");
+                            thread.interrupt();
+                        }
+
                     }
                 }).start();
             }

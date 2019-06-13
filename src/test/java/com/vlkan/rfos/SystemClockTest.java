@@ -41,8 +41,8 @@ public class SystemClockTest {
             LocalDateTime actualDateTime = getActualDateTime(clock);
             String actualDateTimeText = actualDateTime.toString();
             assertThat(actualDateTimeText)
-                    .isEqualTo(expectedDateTimeText)
-                    .as("currentDateTimeText=%s", currentDateTimeText);
+                    .as("currentDateTimeText=%s", currentDateTimeText)
+                    .isEqualTo(expectedDateTimeText);
         }
 
     }

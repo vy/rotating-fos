@@ -109,26 +109,23 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     }
 
-    private void asyncCompress(final RotationPolicy policy, final LocalDateTime dateTime, final File rotatedFile, final RotationCallback callback) {
+    private void asyncCompress(RotationPolicy policy, LocalDateTime dateTime, File rotatedFile, RotationCallback callback) {
         String threadName = String.format("%s.compress(%s)", RotatingFileOutputStream.class.getSimpleName(), rotatedFile);
-        Runnable threadTask = new Runnable() {
-            @Override
-            public void run() {
-                Thread thread = Thread.currentThread();
-                runningThreads.add(thread);
-                File compressedFile = getCompressedFile(rotatedFile);
-                try {
-                    unsafeSyncCompress(rotatedFile, compressedFile);
-                    callback.onSuccess(policy, dateTime, compressedFile);
-                } catch (Exception error) {
-                    String message = String.format(
-                            "compression failure {dateTime=%s, rotatedFile=%s, compressedFile=%s}",
-                            dateTime, rotatedFile, compressedFile);
-                    RuntimeException extendedError = new RuntimeException(message, error);
-                    callback.onFailure(policy, dateTime, rotatedFile, extendedError);
-                } finally {
-                    runningThreads.remove(thread);
-                }
+        Runnable threadTask = () -> {
+            Thread thread = Thread.currentThread();
+            runningThreads.add(thread);
+            File compressedFile = getCompressedFile(rotatedFile);
+            try {
+                unsafeSyncCompress(rotatedFile, compressedFile);
+                callback.onSuccess(policy, dateTime, compressedFile);
+            } catch (Exception error) {
+                String message = String.format(
+                        "compression failure {dateTime=%s, rotatedFile=%s, compressedFile=%s}",
+                        dateTime, rotatedFile, compressedFile);
+                RuntimeException extendedError = new RuntimeException(message, error);
+                callback.onFailure(policy, dateTime, rotatedFile, extendedError);
+            } finally {
+                runningThreads.remove(thread);
             }
         };
         new Thread(threadTask, threadName).start();

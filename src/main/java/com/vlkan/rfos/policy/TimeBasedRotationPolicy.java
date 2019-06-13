@@ -26,8 +26,8 @@ public abstract class TimeBasedRotationPolicy implements RotationPolicy {
         config.getTimer().schedule(timerTask, triggerDateTime.toDate());
     }
 
-    private TimerTask createTimerTask(final Rotatable rotatable, final LocalDateTime triggerDateTime) {
-        final RotationConfig config = rotatable.getConfig();
+    private TimerTask createTimerTask(Rotatable rotatable, LocalDateTime triggerDateTime) {
+        RotationConfig config = rotatable.getConfig();
         return new TimerTask() {
             @Override
             public void run() {

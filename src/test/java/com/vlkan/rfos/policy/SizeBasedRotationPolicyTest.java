@@ -25,12 +25,12 @@ public class SizeBasedRotationPolicyTest {
     public void test() throws InterruptedException {
 
         // Create a timer.
-        final BlockingQueue<Object> timerTaskExecutionPermits = new LinkedBlockingDeque<>();
-        final BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>(1);
-        final BlockingQueue<Long> timerPeriods = new LinkedBlockingDeque<>(1);
+        BlockingQueue<Object> timerTaskExecutionPermits = new LinkedBlockingDeque<>();
+        BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>(1);
+        BlockingQueue<Long> timerPeriods = new LinkedBlockingDeque<>(1);
         Timer timer = new Timer() {
             @Override
-            public void schedule(final TimerTask task, final long delay, final long period) {
+            public void schedule(TimerTask task, long delay, long period) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -64,7 +64,7 @@ public class SizeBasedRotationPolicyTest {
         long checkIntervalMillis = 30_000L;
         long maxByteCount = 1024L * 1024L * 32L;    // 32MB
         SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(checkIntervalMillis, maxByteCount);
-        final RotationConfig config = RotationConfig
+        RotationConfig config = RotationConfig
                 .builder()
                 .file(file)
                 .filePattern(filePattern)
@@ -74,8 +74,8 @@ public class SizeBasedRotationPolicyTest {
                 .build();
 
         // Create a rotatable.
-        final BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
-        final BlockingQueue<String> rotationDateTimeTexts = new LinkedBlockingDeque<>(1);
+        BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
+        BlockingQueue<String> rotationDateTimeTexts = new LinkedBlockingDeque<>(1);
         Rotatable rotatable = Rotatables.createSpyingRotatable(config, rotationPolicies, rotationDateTimeTexts);
 
         // Start policy. (Will consume the 1st clock tick.)

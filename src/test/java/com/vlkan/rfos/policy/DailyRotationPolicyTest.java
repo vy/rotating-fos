@@ -26,10 +26,10 @@ public class DailyRotationPolicyTest {
     public void test() throws InterruptedException {
 
         // Create a timer.
-        final BlockingQueue<String> timerDateTimeTexts = new LinkedBlockingDeque<>();
+        BlockingQueue<String> timerDateTimeTexts = new LinkedBlockingDeque<>();
         Timer timer = new Timer() {
             @Override
-            public void schedule(final TimerTask task, final Date date) {
+            public void schedule(TimerTask task, Date date) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -54,7 +54,7 @@ public class DailyRotationPolicyTest {
         DailyRotationPolicy policy = DailyRotationPolicy.getInstance();
         File file = mock(File.class);
         RotatingFilePattern filePattern = mock(RotatingFilePattern.class);
-        final RotationConfig config = RotationConfig
+        RotationConfig config = RotationConfig
                 .builder()
                 .file(file)
                 .filePattern(filePattern)
@@ -64,8 +64,8 @@ public class DailyRotationPolicyTest {
                 .build();
 
         // Create a rotatable.
-        final BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
-        final BlockingQueue<String> rotationDateTimeTexts = new LinkedBlockingDeque<>(1);
+        BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
+        BlockingQueue<String> rotationDateTimeTexts = new LinkedBlockingDeque<>(1);
         Rotatable rotatable = Rotatables.createSpyingRotatable(config, rotationPolicies, rotationDateTimeTexts);
 
         // Start policy. (Will consume the 1st clock tick.)
