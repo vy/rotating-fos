@@ -89,6 +89,7 @@ the following methods:
 
 - [Jonas (yawkat) Konrad](http://yawk.at/) (`RotatingFileOutputStream`
   thread-safety improvements)
+- [Lukas Bradley](https://github.com/lukasbradley/)
 
 # License
 
