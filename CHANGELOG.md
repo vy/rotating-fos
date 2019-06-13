@@ -9,3 +9,5 @@
 - Added pre-`write()` (that is, write-sensitive) policy execution support.
 
 - Switched from GPL v3 to Apache License v2.0.
+
+- Upgrade dependency versions.
