@@ -34,7 +34,7 @@ RotationConfig config = RotationConfig
         .build();
 
 try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
-    stream.writer("Hello, world!".getBytes(StandardCharsets.UTF_8))
+    stream.write("Hello, world!".getBytes(StandardCharsets.UTF_8));
 }
 ```
 
