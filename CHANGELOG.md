@@ -1,3 +1,7 @@
+### (????-??-??) v0.8
+
+- Fixed license discrepancies. (#3)
+
 ### (2019-06-13) v0.7
 
 - Upgraded to Java 8.
