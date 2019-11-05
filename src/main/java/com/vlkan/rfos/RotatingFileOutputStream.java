@@ -94,7 +94,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
                 return;
             }
 
-            // Close the file
+            // Close the file. (Required before rename on Windows!)
             stream.close();
 
             // Rename the file.
@@ -111,6 +111,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
             // Re-open the file.
             LOGGER.debug("re-opening file {file={}}", config.getFile());
             stream = open();
+
         }
 
         // Compress the old file, if necessary.
@@ -152,20 +153,24 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     private static void unsafeSyncCompress(File rotatedFile, File compressedFile) throws IOException {
+
+        // Compress the file.
         LOGGER.debug("compressing {rotatedFile={}, compressedFile={}}", rotatedFile, compressedFile);
         try (InputStream sourceStream = new FileInputStream(rotatedFile)) {
-            try (GZIPOutputStream gzipTargetStream = new GZIPOutputStream(new FileOutputStream(compressedFile))) {
+            try (FileOutputStream targetStream = new FileOutputStream(compressedFile);
+                 GZIPOutputStream gzipTargetStream = new GZIPOutputStream(targetStream)) {
                 copy(sourceStream, gzipTargetStream);
             }
         }
 
-        // delete after closing the file input stream
+        // Delete the rotated file. (On Windows, delete must take place after closing the file input stream!)
         LOGGER.debug("deleting old file {rotatedFile={}}", rotatedFile);
         boolean deleted = rotatedFile.delete();
         if (!deleted) {
             String message = String.format("failed deleting old file {rotatedFile=%s}", rotatedFile);
             throw new IOException(message);
         }
+
     }
 
     private static void copy(InputStream source, OutputStream target) throws IOException {
