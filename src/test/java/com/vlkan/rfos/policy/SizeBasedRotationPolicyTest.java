@@ -34,9 +34,10 @@ import static org.mockito.Mockito.when;
 public class SizeBasedRotationPolicyTest {
 
     @Test
-    public void test() throws InterruptedException {
+    public void test_timer_triggered_rotation() throws InterruptedException {
 
         // Create a timer.
+        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
         BlockingQueue<Object> timerTaskExecutionPermits = new LinkedBlockingDeque<>();
         BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>(1);
         BlockingQueue<Long> timerPeriods = new LinkedBlockingDeque<>(1);
