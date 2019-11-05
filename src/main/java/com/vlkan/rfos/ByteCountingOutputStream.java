@@ -30,10 +30,6 @@ class ByteCountingOutputStream extends OutputStream {
         this.size = size;
     }
 
-    OutputStream parent() {
-        return parent;
-    }
-
     long size() {
         return size;
     }
@@ -61,4 +57,8 @@ class ByteCountingOutputStream extends OutputStream {
         parent.flush();
     }
 
+    @Override
+    public void close() throws IOException {
+        parent.close();
+    }
 }
