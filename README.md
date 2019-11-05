@@ -95,6 +95,8 @@ the following methods:
 
 # Contributors
 
+- [Christoph (pitschr) Pitschmann](https://github.com/pitschr) (Windows-specific
+  fixes)
 - [Jonas (yawkat) Konrad](https://yawk.at/) (`RotatingFileOutputStream`
   thread-safety improvements)
 - [Lukas Bradley](https://github.com/lukasbradley/)
