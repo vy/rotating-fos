@@ -1,3 +1,16 @@
-language: java
-jdk:
-  - openjdk8
+matrix:
+  include:
+    - os: linux
+      language: java
+      jdk:
+      - openjdk8
+    - os: windows
+      language: shell
+      before_install:
+        - choco install jdk8 maven
+          RefreshEnv.cmd
+          ls /c/ProgramData/chocolatey/bin/
+          java -version
+          mvn -version
+      script:
+        - mvn verify
