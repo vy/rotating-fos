@@ -19,6 +19,7 @@ package com.vlkan.rfos;
 import com.vlkan.rfos.policy.RotationPolicy;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.time.Instant;
 
 public interface RotationCallback {
@@ -27,6 +28,14 @@ public interface RotationCallback {
      * Triggered by the relevant {@link RotationPolicy} prior to rotation.
      */
     void onTrigger(RotationPolicy policy, Instant instant);
+
+    /**
+     * Triggered by {@link RotatingFileOutputStream} either at start or during
+     * rotation. At start, {@code policy} argument will be null. During rotation,
+     * the callback will be awaited to complete the rotation, hence make sure
+     * that the method doesn't block.
+     */
+    void onOpen(RotationPolicy policy, Instant instant, OutputStream stream);
 
     /**
      * Triggered by {@link RotatingFileOutputStream} after a successful rotation.

@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.time.Instant;
 
 public class LoggingRotationCallback implements RotationCallback {
@@ -40,6 +41,11 @@ public class LoggingRotationCallback implements RotationCallback {
     @Override
     public void onTrigger(RotationPolicy policy, Instant instant) {
         LOGGER.debug("rotation trigger {policy={}, instant={}}", policy, instant);
+    }
+
+    @Override
+    public void onOpen(RotationPolicy policy, Instant instant, OutputStream ignored) {
+        LOGGER.debug("file open {policy={}, instant={}}", policy, instant);
     }
 
     @Override
