@@ -39,7 +39,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     public RotatingFileOutputStream(RotationConfig config) {
         this.config = config;
-        this.runningThreads = Collections.synchronizedList(new LinkedList<Thread>());
+        this.runningThreads = Collections.synchronizedList(new LinkedList<>());
         this.writeSensitivePolicies = collectWriteSensitivePolicies(config.getPolicies());
         this.stream = open();
         startPolicies();
@@ -83,45 +83,41 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
     }
 
-    private void unsafeRotate(RotationPolicy policy, Instant instant) throws Exception {
+    private synchronized void unsafeRotate(RotationPolicy policy, Instant instant) throws Exception {
 
-        File rotatedFile;
-        synchronized (this) {
-
-            // Skip rotation if the file is empty.
-            if (config.getFile().length() == 0) {
-                LOGGER.debug("empty file, skipping rotation {file={}}", config.getFile());
-                return;
-            }
-
-            // Close the file. (Required before rename on Windows!)
-            stream.close();
-
-            // Rename the file.
-            rotatedFile = config.getFilePattern().create(instant).getAbsoluteFile();
-            LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
-            boolean renamed = config.getFile().renameTo(rotatedFile);
-            if (!renamed) {
-                String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
-                IOException error = new IOException(message);
-                config.getCallback().onFailure(policy, instant, rotatedFile, error);
-                return;
-            }
-
-            // Re-open the file.
-            LOGGER.debug("re-opening file {file={}}", config.getFile());
-            stream = open();
-
+        // Skip rotation if the file is empty.
+        if (config.getFile().length() == 0) {
+            LOGGER.debug("empty file, skipping rotation {file={}}", config.getFile());
+            return;
         }
+
+        // Close the file. (Required before rename on Windows!)
+        stream.close();
+
+        // Rename the file.
+        File rotatedFile = config.getFilePattern().create(instant).getAbsoluteFile();
+        LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
+        boolean renamed = config.getFile().renameTo(rotatedFile);
+        RotationCallback callback = config.getCallback();
+        if (!renamed) {
+            String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
+            IOException error = new IOException(message);
+            callback.onFailure(policy, instant, rotatedFile, error);
+            return;
+        }
+
+        // Re-open the file.
+        LOGGER.debug("re-opening file {file={}}", config.getFile());
+        stream = open();
 
         // Compress the old file, if necessary.
         if (config.isCompress()) {
-            asyncCompress(policy, instant, rotatedFile, config.getCallback());
+            asyncCompress(policy, instant, rotatedFile, callback);
             return;
         }
 
         // So far, so good;
-        config.getCallback().onSuccess(policy, instant, rotatedFile);
+        callback.onSuccess(policy, instant, rotatedFile);
 
     }
 

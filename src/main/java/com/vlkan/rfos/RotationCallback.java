@@ -23,10 +23,23 @@ import java.time.Instant;
 
 public interface RotationCallback {
 
+    /**
+     * Triggered by the relevant {@link RotationPolicy} prior to rotation.
+     */
     void onTrigger(RotationPolicy policy, Instant instant);
 
+    /**
+     * Triggered by {@link RotatingFileOutputStream} after a successful rotation.
+     * Note that the callback will be awaited to complete the rotation, hence make
+     * sure that the method doesn't block.
+     */
     void onSuccess(RotationPolicy policy, Instant instant, File file);
 
+    /**
+     * Triggered by {@link RotatingFileOutputStream} after a failed rotation attempt.
+     * Note that the call might get executed within the synchronized block, hence
+     * make sure that the method doesn't block.
+     */
     void onFailure(RotationPolicy policy, Instant instant, File file, Exception error);
 
 }

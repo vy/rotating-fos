@@ -113,7 +113,7 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
 
     private void rotate(Instant instant, long byteCount, Rotatable rotatable) {
         LOGGER.debug("triggering {byteCount={}}", byteCount);
-        rotatable.getConfig().getCallback().onTrigger(SizeBasedRotationPolicy.this, instant);
+        rotatable.getConfig().getCallback().onTrigger(this, instant);
         rotatable.rotate(SizeBasedRotationPolicy.this, instant);
     }
 
