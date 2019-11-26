@@ -41,7 +41,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         this.config = config;
         this.runningThreads = Collections.synchronizedList(new LinkedList<>());
         this.writeSensitivePolicies = collectWriteSensitivePolicies(config.getPolicies());
-        this.stream = open();
+        this.stream = open(null, config.getClock().now());
         startPolicies();
     }
 
@@ -61,9 +61,10 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
     }
 
-    private ByteCountingOutputStream open() {
+    private ByteCountingOutputStream open(RotationPolicy policy, Instant instant) {
         try {
             FileOutputStream fileOutputStream = new FileOutputStream(config.getFile(), config.isAppend());
+            config.getCallback().onOpen(policy, instant, fileOutputStream);
             long size = config.isAppend() ? config.getFile().length() : 0;
             return new ByteCountingOutputStream(fileOutputStream, size);
         } catch (IOException error) {
@@ -108,7 +109,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
         // Re-open the file.
         LOGGER.debug("re-opening file {file={}}", config.getFile());
-        stream = open();
+        stream = open(policy, instant);
 
         // Compress the old file, if necessary.
         if (config.isCompress()) {
