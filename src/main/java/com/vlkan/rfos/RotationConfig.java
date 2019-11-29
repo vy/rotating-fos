@@ -22,15 +22,47 @@ import java.io.File;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Timer;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 
 public class RotationConfig {
+
+    private enum DefaultExecutorServiceHolder {;
+
+        private static final ScheduledExecutorService INSTANCE = createDefaultExecutorService();
+
+        private static ScheduledThreadPoolExecutor createDefaultExecutorService() {
+            int threadCount = readDefaultThreadCount();
+            return new ScheduledThreadPoolExecutor(
+                    threadCount,
+                    new ThreadFactory() {
+
+                        private volatile int threadCount = 0;
+
+                        @Override
+                        public synchronized Thread newThread(Runnable runnable) {
+                            String name = String.format("RotationJanitor-%02d", ++threadCount);
+                            return new Thread(runnable, name);
+                        }
+
+                    });
+        }
+
+        private static int readDefaultThreadCount() {
+            String threadCountProperty = System.getProperty("RotationJanitorCount");
+            return threadCountProperty != null
+                    ? Integer.parseInt(threadCountProperty)
+                    : Runtime.getRuntime().availableProcessors();
+        }
+
+    }
 
     private final File file;
 
     private final RotatingFilePattern filePattern;
 
-    private final Timer timer;
+    private final ScheduledExecutorService executorService;
 
     private final Set<RotationPolicy> policies;
 
@@ -45,7 +77,7 @@ public class RotationConfig {
     private RotationConfig(Builder builder) {
         this.file = builder.file;
         this.filePattern = builder.filePattern;
-        this.timer = builder.timer;
+        this.executorService = builder.executorService;
         this.policies = builder.policies;
         this.append = builder.append;
         this.compress = builder.compress;
@@ -61,8 +93,12 @@ public class RotationConfig {
         return filePattern;
     }
 
-    public Timer getTimer() {
-        return timer;
+    public static ScheduledExecutorService getDefaultExecutorService() {
+        return DefaultExecutorServiceHolder.INSTANCE;
+    }
+
+    public ScheduledExecutorService getExecutorService() {
+        return executorService;
     }
 
     public Set<RotationPolicy> getPolicies() {
@@ -94,7 +130,7 @@ public class RotationConfig {
                 compress == that.compress &&
                 Objects.equals(file, that.file) &&
                 Objects.equals(filePattern, that.filePattern) &&
-                Objects.equals(timer, that.timer) &&
+                Objects.equals(executorService, that.executorService) &&
                 Objects.equals(policies, that.policies) &&
                 Objects.equals(clock, that.clock) &&
                 Objects.equals(callback, that.callback);
@@ -102,7 +138,7 @@ public class RotationConfig {
 
     @Override
     public int hashCode() {
-        return Objects.hash(file, filePattern, timer, policies, append, compress, clock, callback);
+        return Objects.hash(file, filePattern, executorService, policies, append, compress, clock, callback);
     }
 
     @Override
@@ -120,7 +156,7 @@ public class RotationConfig {
 
         private RotatingFilePattern filePattern;
 
-        private Timer timer;
+        private ScheduledExecutorService executorService;
 
         private Set<RotationPolicy> policies;
 
@@ -156,8 +192,8 @@ public class RotationConfig {
             return this;
         }
 
-        public Builder timer(Timer timer) {
-            this.timer = timer;
+        public Builder executorService(ScheduledExecutorService executorService) {
+            this.executorService = executorService;
             return this;
         }
 
@@ -201,8 +237,8 @@ public class RotationConfig {
         }
 
         private void prepare() {
-            if (timer == null) {
-                timer = new Timer();
+            if (executorService == null) {
+                executorService = getDefaultExecutorService();
             }
         }
 

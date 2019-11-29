@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 public abstract class TimeBasedRotationPolicy implements RotationPolicy {
 
@@ -33,7 +33,9 @@ public abstract class TimeBasedRotationPolicy implements RotationPolicy {
     }
 
     @Override
-    public void acceptWrite(long byteCount) {}
+    public void acceptWrite(long byteCount) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public void start(Rotatable rotatable) {
@@ -42,20 +44,15 @@ public abstract class TimeBasedRotationPolicy implements RotationPolicy {
         Instant currentInstant = clock.now();
         Instant triggerInstant = getTriggerInstant(clock);
         long triggerDelayMillis = Duration.between(currentInstant, triggerInstant).toMillis();
-        TimerTask timerTask = createTimerTask(rotatable, triggerInstant);
-        config.getTimer().schedule(timerTask, triggerDelayMillis);
+        Runnable task = createTask(rotatable, triggerInstant);
+        config.getExecutorService().schedule(task, triggerDelayMillis, TimeUnit.MILLISECONDS);
     }
 
-    private TimerTask createTimerTask(Rotatable rotatable, Instant triggerInstant) {
-        RotationConfig config = rotatable.getConfig();
-        return new TimerTask() {
-            @Override
-            public void run() {
-                getLogger().debug("triggering {triggerInstant={}}", triggerInstant);
-                config.getCallback().onTrigger(TimeBasedRotationPolicy.this, triggerInstant);
-                rotatable.rotate(TimeBasedRotationPolicy.this, triggerInstant);
-                start(rotatable);
-            }
+    private Runnable createTask(Rotatable rotatable, Instant triggerInstant) {
+        return () -> {
+            getLogger().debug("triggering {triggerInstant={}}", triggerInstant);
+            rotatable.rotate(TimeBasedRotationPolicy.this, triggerInstant);
+            start(rotatable);
         };
     }
 

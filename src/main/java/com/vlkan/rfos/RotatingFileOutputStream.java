@@ -31,15 +31,12 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private final RotationConfig config;
 
-    private final List<Thread> runningThreads;
-
     private final List<RotationPolicy> writeSensitivePolicies;
 
     private volatile ByteCountingOutputStream stream;
 
     public RotatingFileOutputStream(RotationConfig config) {
         this.config = config;
-        this.runningThreads = Collections.synchronizedList(new LinkedList<>());
         this.writeSensitivePolicies = collectWriteSensitivePolicies(config.getPolicies());
         this.stream = open(null, config.getClock().now());
         startPolicies();
@@ -86,6 +83,13 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private synchronized void unsafeRotate(RotationPolicy policy, Instant instant) throws Exception {
 
+        // Check arguments.
+        Objects.requireNonNull(instant, "instant");
+
+        // Notify the trigger listener.
+        RotationCallback callback = config.getCallback();
+        callback.onTrigger(policy, instant);
+
         // Skip rotation if the file is empty.
         if (config.getFile().length() == 0) {
             LOGGER.debug("empty file, skipping rotation {file={}}", config.getFile());
@@ -99,7 +103,6 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         File rotatedFile = config.getFilePattern().create(instant).getAbsoluteFile();
         LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
         boolean renamed = config.getFile().renameTo(rotatedFile);
-        RotationCallback callback = config.getCallback();
         if (!renamed) {
             String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
             IOException error = new IOException(message);
@@ -123,25 +126,34 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     private void asyncCompress(RotationPolicy policy, Instant instant, File rotatedFile, RotationCallback callback) {
-        String threadName = String.format("%s.compress(%s)", RotatingFileOutputStream.class.getSimpleName(), rotatedFile);
-        Runnable threadTask = () -> {
-            Thread thread = Thread.currentThread();
-            runningThreads.add(thread);
-            File compressedFile = getCompressedFile(rotatedFile);
-            try {
-                unsafeSyncCompress(rotatedFile, compressedFile);
-                callback.onSuccess(policy, instant, compressedFile);
-            } catch (Exception error) {
-                String message = String.format(
-                        "compression failure {instant=%s, rotatedFile=%s, compressedFile=%s}",
-                        instant, rotatedFile, compressedFile);
-                RuntimeException extendedError = new RuntimeException(message, error);
-                callback.onFailure(policy, instant, rotatedFile, extendedError);
-            } finally {
-                runningThreads.remove(thread);
+        config.getExecutorService().execute(new Runnable() {
+
+            private final String displayName =
+                    String.format(
+                            "%s.compress(%s)",
+                            RotatingFileOutputStream.class.getSimpleName(), rotatedFile);
+
+            @Override
+            public void run() {
+                File compressedFile = getCompressedFile(rotatedFile);
+                try {
+                    unsafeSyncCompress(rotatedFile, compressedFile);
+                    callback.onSuccess(policy, instant, compressedFile);
+                } catch (Exception error) {
+                    String message = String.format(
+                            "compression failure {instant=%s, rotatedFile=%s, compressedFile=%s}",
+                            instant, rotatedFile, compressedFile);
+                    RuntimeException extendedError = new RuntimeException(message, error);
+                    callback.onFailure(policy, instant, rotatedFile, extendedError);
+                }
             }
-        };
-        new Thread(threadTask, threadName).start();
+
+            @Override
+            public String toString() {
+                return displayName;
+            }
+
+        });
     }
 
     private File getCompressedFile(File rotatedFile) {
@@ -183,10 +195,6 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         return config;
     }
 
-    public List<Thread> getRunningThreads() {
-        return runningThreads;
-    }
-
     @Override
     public synchronized void write(int b) throws IOException {
         long byteCount = stream.size() + 1;
@@ -209,8 +217,10 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     private void notifyWriteSensitivePolicies(long byteCount) {
-        // noinspection ForLoopReplaceableByForEach
-        for (int writeSensitivePolicyIndex = 0; writeSensitivePolicyIndex < writeSensitivePolicies.size(); writeSensitivePolicyIndex++) {
+        // noinspection ForLoopReplaceableByForEach (avoid iterator instantion)
+        for (int writeSensitivePolicyIndex = 0;
+             writeSensitivePolicyIndex < writeSensitivePolicies.size();
+             writeSensitivePolicyIndex++) {
             RotationPolicy writeSensitivePolicy = writeSensitivePolicies.get(writeSensitivePolicyIndex);
             writeSensitivePolicy.acceptWrite(byteCount);
         }
@@ -223,7 +233,6 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public synchronized void close() throws IOException {
-        config.getTimer().cancel();
         stream.close();
         stream = null;
     }

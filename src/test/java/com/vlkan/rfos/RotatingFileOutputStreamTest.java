@@ -16,6 +16,7 @@
 
 package com.vlkan.rfos;
 
+import com.vlkan.rfos.policy.RotationPolicy;
 import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
@@ -26,17 +27,15 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Calendar;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,179 +58,106 @@ public class RotatingFileOutputStreamTest {
 
     private void test_write_insensitive_policy(boolean compress) throws Exception {
 
-        // Set file names.
+        // Determine file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
         File file = new File(tmpDir.getRoot(), className + ".log");
         String fileName = file.getAbsolutePath();
         String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
         String rotatedFileNameSuffix = compress ? ".gz" : "";
-        File rotatedFile = new File(fileNamePattern.replace(
-                "%d{yyyy}",
-                String.valueOf(Calendar.getInstance().get(Calendar.YEAR))) + rotatedFileNameSuffix);
+        Instant now = Instant.now();
+        File rotatedFile = new File(
+                fileNamePattern.replace(
+                        "%d{yyyy}",
+                        String.valueOf(now.atZone(UtcHelper.ZONE_ID).getYear()))
+                        + rotatedFileNameSuffix);
 
-        // Create the timer which is advanced by permits in a queue.
-        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-        BlockingQueue<Object> timerTaskExecutionPermits = new LinkedBlockingDeque<>();
-        BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>(1);
-        BlockingQueue<Long> timerPeriods = new LinkedBlockingDeque<>(1);
-        BlockingQueue<Integer> timerTaskExecutionCounts = new LinkedBlockingDeque<>(1);
-        Timer timer = new Timer() {
-            @Override
-            public void schedule(TimerTask task, long delay, long period) {
-                new Thread(() -> {
-                    int executionCount = 0;
-                    boolean first = true;
-                    Thread thread = Thread.currentThread();
-                    while (true) {
-
-                        LOGGER.trace("awaiting task execution permit");
-                        try {
-                            timerTaskExecutionPermits.poll(1, TimeUnit.SECONDS);
-                        } catch (InterruptedException ignored) {
-                            LOGGER.warn("task execution permit await is interrupted");
-                            thread.interrupt();
-                        }
-
-                        if (first) {
-                            LOGGER.trace("executing task for the first time");
-                            first = false;
-                            try {
-                                timerDelays.put(delay);
-                                timerPeriods.put(period);
-                            } catch (InterruptedException ignored) {
-                                LOGGER.warn("timer delay & period push is interrupted");
-                                thread.interrupt();
-                            }
-                        } else {
-                            LOGGER.trace("executing task");
-                        }
-                        task.run();
-
-                        LOGGER.trace("pushing task execution count");
-                        try {
-                            timerTaskExecutionCounts.put(++executionCount);
-                        } catch (InterruptedException ignored) {
-                            LOGGER.warn("timer task execution count push is interrupted");
-                            thread.interrupt();
-                        }
-
-                    }
-                }).start();
-            }
-        };
+        // Create the policy.
+        RotationPolicy policy = Mockito.mock(RotationPolicy.class);
+        Mockito.when(policy.isWriteSensitive()).thenReturn(false);
+        Mockito.when(policy.toString()).thenReturn("MockedPolicy");
 
         // Create the stream.
-        int checkIntervalMillis = 50;
-        int maxByteCount = 1024;
-        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(checkIntervalMillis, maxByteCount);
-        RecordingRotationCallback callback = new RecordingRotationCallback(3);
+        RotationCallback callback = Mockito.spy(LoggingRotationCallback.getInstance());
         RotationConfig config = RotationConfig
                 .builder()
                 .compress(compress)
                 .file(fileName)
                 .filePattern(fileNamePattern)
-                .timer(timer)
                 .policy(policy)
                 .callback(callback)
                 .build();
+        InOrder inOrder = Mockito.inOrder(callback, policy);
         RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
 
         // Verify the initial file open.
-        RecordingRotationCallback.CallContext callbackCallContext0 = callback
-                .receivedCallContexts
-                .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext0).isInstanceOf(RecordingRotationCallback.OnOpenContext.class);
+        inOrder
+                .verify(callback)
+                .onOpen(Mockito.isNull(),
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
 
-        // Allow timer to proceed.
-        LOGGER.trace("pushing task execution permit");
-        timerTaskExecutionPermits.put(1L);
+        // Verify the policy start.
+        inOrder.verify(policy).start(Mockito.eq(stream));
 
-        // Verify the timer call.
-        Long timerDelay = timerDelays.poll(1, TimeUnit.SECONDS);
-        assertThat(timerDelay).isEqualTo(0L);
-        Long timerPeriod = timerPeriods.poll(1, TimeUnit.SECONDS);
-        assertThat(timerPeriod).isEqualTo(checkIntervalMillis);
-
-        // Verify timer task is executed.
-        Integer timerTaskExecutionCount1 = timerTaskExecutionCounts.poll(1, TimeUnit.SECONDS);
-        assertThat(timerTaskExecutionCount1).isEqualTo(1);
-
-        // Verify no rotations so far.
-        RecordingRotationCallback.CallContext callbackCallContext1 = callback.receivedCallContexts.peek();
-        assertThat(callbackCallContext1).isNull();
-
-        // Increase the size of the file just to the edge.
-        LOGGER.trace("writing to file");
-        for (int byteIndex = 0; byteIndex < maxByteCount; byteIndex++) {
-            stream.write(byteIndex);
-        }
+        // Write some bytes.
+        byte[] payload = "stuff to be written".getBytes(StandardCharsets.UTF_8);
+        stream.write(payload);
         stream.flush();
-        assertThat(file.length()).isEqualTo(maxByteCount);
 
-        // Allow timer to proceed.
-        LOGGER.trace("pushing task execution permit");
-        timerTaskExecutionPermits.put(2L);
+        // Verify that policy is not acknowledged on write.
+        Mockito.verify(policy).isWriteSensitive();
+        Mockito.verify(policy, Mockito.never()).acceptWrite(Mockito.anyLong());
 
-        // Verify timer task is executed.
-        Integer timerTaskExecutionCount2 = timerTaskExecutionCounts.poll(1, TimeUnit.SECONDS);
-        assertThat(timerTaskExecutionCount2).isEqualTo(2);
-
-        // Verify no rotations so far.
-        RecordingRotationCallback.CallContext callbackCallContext2 = callback.receivedCallContexts.peek();
-        assertThat(callbackCallContext2).isNull();
-
-        // Push the file size off the threshold.
-        LOGGER.trace("writing more bytes to file");
-        stream.write(maxByteCount);
-        stream.flush();
-        assertThat(file.length()).isEqualTo(maxByteCount + 1);
-
-        // Allow timer to proceed.
-        LOGGER.trace("pushing task execution permit");
-        timerTaskExecutionPermits.put(3L);
-
-        // Verify timer task is executed.
-        Integer timerTaskExecutionCount3 = timerTaskExecutionCounts.poll(1, TimeUnit.SECONDS);
-        assertThat(timerTaskExecutionCount3).isEqualTo(3);
+        // Trigger rotation.
+        stream.rotate(policy, now);
 
         // Verify the rotation trigger.
-        RecordingRotationCallback.CallContext callbackCallContext3 = callback
-                .receivedCallContexts
-                .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext3).isInstanceOf(RecordingRotationCallback.OnTriggerContext.class);
+        inOrder
+                .verify(callback)
+                .onTrigger(Mockito.same(policy), Mockito.same(now));
 
         // Verify the rotation file open.
-        RecordingRotationCallback.CallContext callbackCallContext4 = callback
-                .receivedCallContexts
-                .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext4).isInstanceOf(RecordingRotationCallback.OnOpenContext.class);
+        inOrder
+                .verify(callback)
+                .onOpen(Mockito.same(policy),
+                        Mockito.same(now),
+                        Mockito.any(OutputStream.class));
 
         // Verify the rotation.
-        RecordingRotationCallback.OnSuccessContext callbackCallContext5 =
-                (RecordingRotationCallback.OnSuccessContext) callback
-                        .receivedCallContexts
-                        .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext5).isNotNull();
-        assertThat(callbackCallContext5.policy).isEqualTo(policy);
-        assertThat(callbackCallContext5.file).isEqualTo(rotatedFile);
-        long callbackSuccessFile3Length = callbackCallContext5.file.length();
-        if (compress) {
-            assertThat(callbackSuccessFile3Length).isGreaterThan(0);
-        } else {
-            assertThat(callbackSuccessFile3Length).isEqualTo(maxByteCount + 1);
-        }
+        inOrder
+                .verify(callback, Mockito.timeout(1_000))
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.same(now),
+                        Mockito.eq(rotatedFile));
+        long rotatedFileLength = rotatedFile.length();
+        int expectedRotatedFileLength = compress
+                ? findCompressedLength(payload)
+                : payload.length;
+        assertThat(rotatedFileLength).isEqualTo(expectedRotatedFileLength);
         assertThat(file.length()).isEqualTo(0);
 
-        // Verify the callback queue is drained.
-        RecordingRotationCallback.CallContext callbackCallContext6 = callback.receivedCallContexts.peek();
-        assertThat(callbackCallContext6).isNull();
+        // Verify no more interactions.
+        Mockito.verifyNoMoreInteractions(callback);
+        Mockito.verifyNoMoreInteractions(policy);
 
+    }
+
+    private static int findCompressedLength(byte[] inputBytes) {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+             try (GZIPOutputStream gzippedOutputStream = new GZIPOutputStream(outputStream)) {
+                 gzippedOutputStream.write(inputBytes);
+             }
+            return outputStream.toByteArray().length;
+        } catch (IOException error) {
+            throw new RuntimeException("compress failure", error);
+        }
     }
 
     @Test
     public void test_write_sensitive_policy() throws Exception {
 
-        // Set file names.
+        // Determine file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
         File file = new File(tmpDir.getRoot(), className + ".log");
         String fileName = file.getAbsolutePath();
@@ -240,79 +166,75 @@ public class RotatingFileOutputStreamTest {
 
         // Create the stream.
         int maxByteCount = 1024;
-        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(0, maxByteCount);
-        RecordingRotationCallback callback = new RecordingRotationCallback(3);
-        Timer timer = Mockito.mock(Timer.class);
+        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(maxByteCount);
+        RotationCallback callback = Mockito.spy(LoggingRotationCallback.getInstance());
+        InOrder callbackInOrder = Mockito.inOrder(callback);
         RotationConfig config = RotationConfig
                 .builder()
                 .file(fileName)
                 .filePattern(fileNamePattern)
-                .timer(timer)
                 .policy(policy)
                 .callback(callback)
                 .build();
         RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
 
         // Verify the initial file open.
-        RecordingRotationCallback.CallContext callbackCallContext0 = callback
-                .receivedCallContexts
-                .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext0).isInstanceOf(RecordingRotationCallback.OnOpenContext.class);
+        callbackInOrder
+                .verify(callback)
+                .onOpen(Mockito.isNull(),
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
 
         // Verify no rotations so far.
-        RecordingRotationCallback.CallContext callbackCallContext1 = callback.receivedCallContexts.peek();
-        assertThat(callbackCallContext1).isNull();
+        Mockito.verifyNoMoreInteractions(callback);
 
         // Increase the size of the file just to the edge.
         LOGGER.trace("writing to file");
         for (int byteIndex = 0; byteIndex < maxByteCount; byteIndex++) {
             stream.write(byteIndex);
         }
-        stream.flush();
         assertThat(file.length()).isEqualTo(maxByteCount);
 
         // Verify no rotations so far.
-        RecordingRotationCallback.CallContext callbackCallContext2 = callback.receivedCallContexts.peek();
-        assertThat(callbackCallContext2).isNull();
+        Mockito.verifyNoMoreInteractions(callback);
 
         // Push the file size off the threshold.
         LOGGER.trace("writing more bytes to file");
-        stream.write(maxByteCount);
+        stream.write(0xDEADBEEF);
 
         // Verify the rotation trigger.
-        RecordingRotationCallback.CallContext callbackCallContext3 = callback
-                .receivedCallContexts
-                .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext3).isInstanceOf(RecordingRotationCallback.OnTriggerContext.class);
+        callbackInOrder
+                .verify(callback)
+                .onTrigger(
+                        Mockito.same(policy),
+                        Mockito.any(Instant.class));
 
         // Verify the rotation file open.
-        RecordingRotationCallback.CallContext callbackCallContext4 = callback
-                .receivedCallContexts
-                .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext4).isInstanceOf(RecordingRotationCallback.OnOpenContext.class);
+        callbackInOrder
+                .verify(callback)
+                .onOpen(Mockito.same(policy),
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
 
         // Verify the rotation.
-        RecordingRotationCallback.OnSuccessContext callbackCallContext5 =
-                (RecordingRotationCallback.OnSuccessContext) callback
-                        .receivedCallContexts
-                        .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext5).isNotNull();
-        assertThat(callbackCallContext5.policy).isEqualTo(policy);
-        assertThat(callbackCallContext5.file).isEqualTo(rotatedFile);
-        long callbackSuccessFile3Length = callbackCallContext5.file.length();
-        assertThat(callbackSuccessFile3Length).isEqualTo(maxByteCount);
+        callbackInOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.any(Instant.class),
+                        Mockito.eq(rotatedFile));
+        assertThat(rotatedFile.length()).isEqualTo(maxByteCount);
         assertThat(file.length()).isEqualTo(1);
 
-        // Verify the callback queue is drained.
-        RecordingRotationCallback.CallContext callbackCallContext6 = callback.receivedCallContexts.peek();
-        assertThat(callbackCallContext6).isNull();
+        // Verify no more callback interactions.
+        Mockito.verifyNoMoreInteractions(callback);
 
     }
 
     @Test
     public void test_empty_files_are_not_rotated() throws Exception {
 
-        // Set file names.
+        // Determine file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
         File file = new File(tmpDir.getRoot(), className + ".log");
         String fileName = file.getAbsolutePath();
@@ -320,30 +242,28 @@ public class RotatingFileOutputStreamTest {
 
         // Create the stream.
         int maxByteCount = 1024;
-        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(0, maxByteCount);
-        RecordingRotationCallback callback = new RecordingRotationCallback(1);
-        Timer timer = Mockito.mock(Timer.class);
+        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(maxByteCount);
+        RotationCallback callback = Mockito.spy(LoggingRotationCallback.getInstance());
+        InOrder callbackInOrder = Mockito.inOrder(callback);
         RotationConfig config = RotationConfig
                 .builder()
                 .file(fileName)
                 .filePattern(fileNamePattern)
-                .timer(timer)
                 .policy(policy)
                 .callback(callback)
                 .build();
         RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
 
         // Verify the initial file open.
-        RecordingRotationCallback.CallContext callbackCallContext0 = callback
-                .receivedCallContexts
-                .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext0).isInstanceOf(RecordingRotationCallback.OnOpenContext.class);
+        callbackInOrder
+                .verify(callback)
+                .onOpen(Mockito.isNull(),
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
 
-        // Verify no rotations so far.
-        RecordingRotationCallback.CallContext callbackCallContext1 = callback.receivedCallContexts.peek();
-        assertThat(callbackCallContext1).isNull();
-
-        // Write payload with size exceeding the threshold.
+        // Write some payload of size exceeding the threshold. This should trigger
+        // an attempt to rotate the initial file, but the actual rotation should
+        // have skipped since the file is empty.
         LOGGER.trace("writing to file");
         byte[] payload = new byte[2 * maxByteCount];
         for (int byteIndex = 0; byteIndex < payload.length; byteIndex++) {
@@ -354,39 +274,34 @@ public class RotatingFileOutputStreamTest {
         assertThat(file.length()).isEqualTo(payload.length);
 
         // Verify the rotation trigger.
-        RecordingRotationCallback.CallContext callbackCallContext2 = callback
-                .receivedCallContexts
-                .poll(1, TimeUnit.SECONDS);
-        assertThat(callbackCallContext2).isInstanceOf(RecordingRotationCallback.OnTriggerContext.class);
+        callbackInOrder
+                .verify(callback)
+                .onTrigger(Mockito.same(policy), Mockito.any(Instant.class));
 
         // Verify the rotation skip.
-        RecordingRotationCallback.CallContext callbackCallContext3 = callback.receivedCallContexts.peek();
-        assertThat(callbackCallContext3).isNull();
+        Mockito.verifyNoMoreInteractions(callback);
 
     }
 
     @Test
     public void test_adding_file_header() throws IOException {
 
-        // Set file names.
+        // Determine file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
         File file = new File(tmpDir.getRoot(), className + ".log");
         String fileName = file.getAbsolutePath();
         String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
         File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))));
 
-        RotationCallback callback = Mockito.spy(LoggingRotationCallback.getInstance());
-        InOrder callbackInOrder = Mockito.inOrder(callback);
-
         // Create the stream config.
         int maxByteCount = 1024;
-        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(0, maxByteCount);
-        Timer timer = Mockito.mock(Timer.class);
+        SizeBasedRotationPolicy policy = new SizeBasedRotationPolicy(maxByteCount);
+        RotationCallback callback = Mockito.spy(LoggingRotationCallback.getInstance());
+        InOrder callbackInOrder = Mockito.inOrder(callback);
         RotationConfig config = RotationConfig
                 .builder()
                 .file(fileName)
                 .filePattern(fileNamePattern)
-                .timer(timer)
                 .policy(policy)
                 .callback(callback)
                 .build();
@@ -490,6 +405,9 @@ public class RotatingFileOutputStreamTest {
         System.arraycopy(header2, 0, expectedReopenedFileBytes, 0, header2.length);
         System.arraycopy(payload2, 0, expectedReopenedFileBytes, header2.length, payload2.length);
         Assertions.assertThat(reopenedFileBytes).isEqualTo(expectedReopenedFileBytes);
+
+        // Verify no more interactions.
+        Mockito.verifyNoMoreInteractions(callback);
 
     }
 

@@ -1,5 +1,15 @@
 ### (????-??-??) v0.8
 
+- Overhauled tests.
+
+- Improved documentation.
+
+- Added `RotationCallback#onOpen()` method. (#6)
+
+- Removed timer-based invocation from `SizeBasedRotationPolicy`.
+
+- Replaced `Timer` and `Thread` usage with a shared `ScheduledExecutorService`.
+
 - Fixed license discrepancies. (#3)
 
 ### (2019-06-13) v0.7
