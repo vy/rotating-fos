@@ -3,9 +3,9 @@
 [![License](https://img.shields.io/github/license/vy/rotating-fos.svg)](https://www.apache.org/licenses/LICENSE-2.0.txt)
 
 `rotating-fos` is a Java 8 library providing `RotatingFileOutputStream` which
-internally rotates an underlying `FileOutputStream` using provided rotation
-policies similar to [Log4j](https://logging.apache.org/log4j/) or
-[Logback](https://logback.qos.ch/).
+internally rotates a delegate `FileOutputStream` using provided rotation
+policies similar to [logrotate](https://github.com/logrotate/logrotate),
+[Log4j](https://logging.apache.org/log4j/) and [Logback](https://logback.qos.ch/).
 
 # Usage
 
@@ -29,7 +29,7 @@ RotationConfig config = RotationConfig
         .builder()
         .file("/tmp/app.log")
         .filePattern("/tmp/app-%d{yyyyMMdd-HHmmss.SSS}.log")
-        .policy(new SizeBasedRotationPolicy(5000 /* 5s */, 1024 * 1024 * 100 /* 100MB */))
+        .policy(new SizeBasedRotationPolicy(1024 * 1024 * 100 /* 100MiB */))
         .policy(DailyRotationPolicy.getInstance())
         .build();
 
@@ -40,16 +40,24 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 
 `RotationConfig.Builder` supports the following methods:
 
-| Method(s) | Default | Description |
-| --------- | ------- | ----------- |
-| `file(File)`<br/>`file(String)` | N/A | file accessed (e.g., `/tmp/app.log`) |
-| `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| N/A | rotating file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
-| `policy(RotationPolicy)`<br/>`policies(Set<RotationPolicy> policies)` | N/A | rotation policies |
-| `timer(Timer)` | `Timer` | timer for scheduling policies |
-| `append(boolean)` | `true` | append while opening the `file` |
-| `compress(boolean)` | `false` | GZIP compression after rotation |
-| `clock(Clock)` | `SystemClock` | clock for retrieving date and time |
-| `callback(RotationCallback)` | `LoggingRotationCallback` | rotation callback |
+| Method(s) | Description |
+| --------- | ----------- |
+| `file(File)`<br/>`file(String)` | file accessed (e.g., `/tmp/app.log`) |
+| `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| rotating file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
+| `policy(RotationPolicy)`<br/>`policies(Set<RotationPolicy> policies)` | rotation policies |
+| `executorService(ScheduledExecutorService)` | scheduler for time-based policies and compression tasks |
+| `append(boolean)` | append while opening the `file` (defaults to `true`) |
+| `compress(boolean)` | GZIP compression after rotation (defaults to `false`) |
+| `clock(Clock)` | clock for retrieving date and time (defaults to `SystemClock`) |
+| `callback(RotationCallback)` | rotation callback (defaults to `LoggingRotationCallback`) |
+
+The default `ScheduledExecutorService` can be retrieved via
+`RotationConfig#getDefaultExecutorService()`, which is a
+`ScheduledThreadPoolExecutor` of size `Runtime.getRuntime().availableProcessors()`.
+Note that unless explicitly specified in `RotationConfig.Builder`, all instances
+of `RotationConfig` (and hence of `RotatingFileOutputStream`) will share the
+same `ScheduledExecutorService`. You can change the default pool size via
+`RotationJanitorCount` system property.
 
 Packaged rotation policies are listed below. (You can also create your own
 rotation policies by implementing `RotationPolicy` interface.)
@@ -63,17 +71,28 @@ Once you have a handle on `RotatingFileOutputStream`, in addition to standard
 the following methods:
 
 | Method | Description |
-| --------- | ----------- |
-| `RotationConfig getConfig()` | used configuration |
-| `List<Thread> getRunningThreads()` | compression threads running in the background |
+| ------ | ------------|
+| `getConfig()` | employed `RotationConfig` |
+| `rotate(RotationPolicy, Instant)` | trigger a rotation |
 
 `RotatingFilePattern.Builder` supports the following methods:
 
-| Method | Default | Description |
-| ------ | ------- | ----------- |
-| `pattern(String)` | N/A | rotating file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
-| `locale(Locale)` | `Locale.getDefault()` | `Locale` used in the `DateTimeFormatter` |
-| `timeZoneId(ZoneId)` | `TimeZone.getDefault().toZoneId()` | `ZoneId` denoting the time zone used in the `DateTimeFormatter` |
+| Method | Description |
+| ------ | ----------- |
+| `pattern(String)` | rotating file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
+| `locale(Locale)` | `Locale` used in the `DateTimeFormatter` (defaults to `Locale.getDefault()`) |
+| `timeZoneId(ZoneId)` | `ZoneId` denoting the time zone used in the `DateTimeFormatter` (defaults to `TimeZone.getDefault().toZoneId()`) |
+
+Rotation-triggered custom behaviours can be introduced via `RotationCallback`
+passed to `RotationConfig.Builder`. `RotationCallback` provides the following
+methods.
+
+| Method | Description |
+| ------ | ----------- |
+| `onTrigger(RotationPolicy, Instant)` | invoked at the beginning of every rotation attempt |
+| `onOpen(RotationPolicy, Instant, OutputStream)` | invoked at start and during rotation |
+| `onSuccess(RotationPolicy, Instant, File)` | invoked after a successful rotation |
+| `onFailure(RotationPolicy, Instant, File, Exception)` | invoked after a failed rotation attempt |
 
 # Caveats
 
@@ -84,19 +103,20 @@ the following methods:
   fine-grained date-time pattern.
 
   For instance, given `filePattern` is `/tmp/app-%d{yyyyMMdd}.log`, if
-  `SizeBasedRotationPolicy` gets triggered multiple times within a day,
-  the last one will override the earlier generations in the same day.
-  In order to avoid this, you should have been using a date-time pattern
-  with a higher resolution, such as `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`.
+  `SizeBasedRotationPolicy` gets triggered multiple times within a day, the last
+  one will override the earlier generations in the same day. In order to avoid
+  this, you should use a date-time pattern with a higher resolution, such as
+  `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`.
 
 - **Make sure `RotationCallback` methods are not blocking.** Callbacks are
-  invoked using the `Timer` thread passed via `RotationConfig`. Hence
-  blocking callback methods are going to block `Timer` thread too.
+  invoked using the `ScheduledExecutorService` passed via `RotationConfig`.
+  Hence blocking callback methods have a direct impact on time-sensitive
+  policies and compression tasks.
 
 # Contributors
 
 - [Christoph (pitschr) Pitschmann](https://github.com/pitschr) (Windows-specific
-  fixes)
+  fixes, `RotationCallback#onOpen()` method)
 - [Jonas (yawkat) Konrad](https://yawk.at/) (`RotatingFileOutputStream`
   thread-safety improvements)
 - [Lukas Bradley](https://github.com/lukasbradley/)

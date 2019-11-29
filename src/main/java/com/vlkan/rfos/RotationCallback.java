@@ -25,29 +25,32 @@ import java.time.Instant;
 public interface RotationCallback {
 
     /**
-     * Triggered by the relevant {@link RotationPolicy} prior to rotation.
+     * Invoked by {@link RotatingFileOutputStream} at the beginning of every
+     * {@link RotatingFileOutputStream#rotate(RotationPolicy, Instant)} call.
+     * The callback will be awaited in a synchronized block to complete the
+     * rotation, hence make sure that the method doesn't block.
      */
     void onTrigger(RotationPolicy policy, Instant instant);
 
     /**
-     * Triggered by {@link RotatingFileOutputStream} either at start or during
-     * rotation. At start, {@code policy} argument will be null. During rotation,
-     * the callback will be awaited to complete the rotation, hence make sure
+     * Invoked by {@link RotatingFileOutputStream} at start or during rotation.
+     * At start, {@code policy} argument will be null. The callback will be
+     * awaited in a synchronized block to complete the rotation, hence make sure
      * that the method doesn't block.
      */
     void onOpen(RotationPolicy policy, Instant instant, OutputStream stream);
 
     /**
-     * Triggered by {@link RotatingFileOutputStream} after a successful rotation.
-     * Note that the callback will be awaited to complete the rotation, hence make
-     * sure that the method doesn't block.
+     * Invoked by {@link RotatingFileOutputStream} after a successful rotation.
+     * Note that the callback will be awaited in a synchronized block to complete
+     * the rotation, hence make sure that the method doesn't block.
      */
     void onSuccess(RotationPolicy policy, Instant instant, File file);
 
     /**
-     * Triggered by {@link RotatingFileOutputStream} after a failed rotation attempt.
-     * Note that the call might get executed within the synchronized block, hence
-     * make sure that the method doesn't block.
+     * Invoked by {@link RotatingFileOutputStream} after a failed rotation attempt.
+     * Note that the call might get executed in a synchronized block of the
+     * rotation procedure, hence make sure that the method doesn't block.
      */
     void onFailure(RotationPolicy policy, Instant instant, File file, Exception error);
 

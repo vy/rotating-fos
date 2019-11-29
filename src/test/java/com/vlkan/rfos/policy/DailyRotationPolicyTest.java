@@ -16,91 +16,116 @@
 
 package com.vlkan.rfos.policy;
 
-import com.vlkan.rfos.*;
+import com.vlkan.rfos.Clock;
+import com.vlkan.rfos.Rotatable;
+import com.vlkan.rfos.RotatingFilePattern;
+import com.vlkan.rfos.RotationConfig;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.time.Duration;
 import java.time.Instant;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class DailyRotationPolicyTest {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(DailyRotationPolicyTest.class);
+
     @Test
-    public void test() throws InterruptedException {
+    public void test() {
 
-        // Create a timer.
-        BlockingQueue<Long> timerDelays = new LinkedBlockingDeque<>();
-        Timer timer = new Timer() {
-            @Override
-            public void schedule(TimerTask task, long delayMillis) {
-                new Thread(() -> {
-                    try {
-                        timerDelays.put(delayMillis);
-                    } catch (InterruptedException ignored) {
-                        Thread.currentThread().interrupt();
+        // Create the scheduler mock.
+        ScheduledExecutorService executorService = Mockito.mock(ScheduledExecutorService.class);
+        Mockito
+                .when(executorService.schedule(
+                        Mockito.any(Runnable.class),
+                        Mockito.anyLong(),
+                        Mockito.same(TimeUnit.MILLISECONDS)))
+                .thenAnswer(new Answer<Object>() {
+
+                    private int invocationCount = 0;
+
+                    @Override
+                    public Object answer(InvocationOnMock invocation) {
+                        Runnable runnable = invocation.getArgument(0);
+                        if (++invocationCount < 3) {
+                            runnable.run();
+                        } else {
+                            LOGGER.trace("skipping execution {invocationCount={}}", invocationCount);
+                        }
+                        return null;
                     }
-                    task.run();
-                }).start();
-            }
-        };
 
-        // Setup the 1st clock tick.
-        Clock clock = mock(Clock.class);
-        String midnight1Text = "2017-12-29T00:00:00.000Z";
-        Instant midnight1Instant = Instant.parse(midnight1Text);
-        when(clock.now()).thenReturn(midnight1Instant);
-        when(clock.midnight()).thenReturn(midnight1Instant);
+                });
+
+        // Create the clock mock.
+        Clock clock = Mockito.mock(Clock.class);
+        Instant midnight1 = Instant.parse("2017-12-29T00:00:00.000Z");
+        long waitPeriod1Millis = 1_000;
+        Instant now1 = midnight1.minus(Duration.ofMillis(waitPeriod1Millis));
+        Instant midnight2 = Instant.parse("2017-12-30T00:00:00.000Z");
+        long waitPeriod2Millis = 2_000;
+        Instant now2 = midnight2.minus(Duration.ofMillis(waitPeriod2Millis));
+        Mockito
+                .when(clock.now())
+                .thenReturn(now1)
+                .thenReturn(now2);
+        Mockito
+                .when(clock.midnight())
+                .thenReturn(midnight1)
+                .thenReturn(midnight2);
 
         // Create the config.
         DailyRotationPolicy policy = DailyRotationPolicy.getInstance();
-        File file = mock(File.class);
-        RotatingFilePattern filePattern = mock(RotatingFilePattern.class);
+        File file = Mockito.mock(File.class);
+        RotatingFilePattern filePattern = Mockito.mock(RotatingFilePattern.class);
         RotationConfig config = RotationConfig
                 .builder()
                 .file(file)
                 .filePattern(filePattern)
                 .clock(clock)
-                .timer(timer)
+                .executorService(executorService)
                 .policy(policy)
                 .build();
 
-        // Create a rotatable.
-        BlockingQueue<RotationPolicy> rotationPolicies = new LinkedBlockingDeque<>(1);
-        BlockingQueue<String> rotationInstantTexts = new LinkedBlockingDeque<>(1);
-        Rotatable rotatable = Rotatables.createSpyingRotatable(config, rotationPolicies, rotationInstantTexts);
+        // Create the rotatable mock.
+        Rotatable rotatable = Mockito.mock(Rotatable.class);
+        Mockito.when(rotatable.getConfig()).thenReturn(config);
 
-        // Start policy. (Will consume the 1st clock tick.)
+        // Start policy.
         policy.start(rotatable);
 
-        // Setup the 2nd clock tick. (Will be consumed when we start draining from blocking queues.)
-        String midnight2Text = "2017-12-30T00:00:00.000Z";
-        Instant midnight2Instant = Instant.parse(midnight2Text);
-        when(clock.now()).thenReturn(midnight2Instant);
-        when(clock.midnight()).thenReturn(midnight2Instant);
+        // Verify the 1st execution.
+        Mockito
+                .verify(executorService)
+                .schedule(
+                        Mockito.any(Runnable.class),
+                        Mockito.eq(waitPeriod1Millis),
+                        Mockito.same(TimeUnit.MILLISECONDS));
 
-        // Consume the 1st blocking queue entries.
-        Long timerDelay1 = timerDelays.poll(1, TimeUnit.SECONDS);
-        assertThat(timerDelay1).isEqualTo(0L);
-        RotationPolicy rotationPolicy1 = rotationPolicies.poll(1, TimeUnit.SECONDS);
-        assertThat(rotationPolicy1).isEqualTo(policy);
-        String rotationInstantText1 = rotationInstantTexts.poll(1, TimeUnit.SECONDS);
-        assertThat(rotationInstantText1).isEqualTo(midnight1Text);
+        // Verify the 1st rotation.
+        Mockito
+                .verify(rotatable)
+                .rotate(Mockito.same(policy), Mockito.eq(midnight1));
 
-        // Consume the 2nd blocking queue entries.
-        Long timerDelay2 = timerDelays.poll(1, TimeUnit.SECONDS);
-        assertThat(timerDelay2).isEqualTo(0L);
-        RotationPolicy rotationPolicy2 = rotationPolicies.poll(1, TimeUnit.SECONDS);
-        assertThat(rotationPolicy2).isEqualTo(policy);
-        String rotationDateTimeText2 = rotationInstantTexts.poll(1, TimeUnit.SECONDS);
-        assertThat(rotationDateTimeText2).isEqualTo(midnight2Text);
+        // Verify the 2nd execution.
+        Mockito
+                .verify(executorService, Mockito.atLeastOnce())
+                .schedule(
+                        Mockito.any(Runnable.class),
+                        Mockito.eq(waitPeriod2Millis),
+                        Mockito.same(TimeUnit.MILLISECONDS));
+
+        // Verify the 2nd rotation.
+        Mockito
+                .verify(rotatable)
+                .rotate(Mockito.same(policy), Mockito.eq(midnight2));
 
     }
 
