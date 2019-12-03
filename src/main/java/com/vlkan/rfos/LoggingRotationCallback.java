@@ -49,6 +49,11 @@ public class LoggingRotationCallback implements RotationCallback {
     }
 
     @Override
+    public void onClose(RotationPolicy policy, Instant instant, OutputStream stream) {
+        LOGGER.debug("file close {policy={}, instant={}}", policy, instant);
+    }
+
+    @Override
     public void onSuccess(RotationPolicy policy, Instant instant, File file) {
         LOGGER.debug("rotation success {policy={}, instant={}, file={}}", policy, instant, file);
     }

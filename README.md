@@ -91,10 +91,15 @@ methods.
 | ------ | ----------- |
 | `onTrigger(RotationPolicy, Instant)` | invoked at the beginning of every rotation attempt |
 | `onOpen(RotationPolicy, Instant, OutputStream)` | invoked at start and during rotation |
+| `onClose(RotationPolicy, Instant, OutputStream)` | invoked on stream close and during rotation |
 | `onSuccess(RotationPolicy, Instant, File)` | invoked after a successful rotation |
 | `onFailure(RotationPolicy, Instant, File, Exception)` | invoked after a failed rotation attempt |
 
 # Caveats
+
+- **`append` is enabled for `RotatingFileOutputStream` by default**, whereas
+  it is disabled (and hence truncates the file at start) for standard
+  `FileOutputStream` by default.
 
 - **Rotated file conflicts are not resolved by `rotating-fos`.** Once a
   rotation policy gets triggered, `rotating-fos` applies the given
@@ -112,6 +117,13 @@ methods.
   invoked using the `ScheduledExecutorService` passed via `RotationConfig`.
   Hence blocking callback methods have a direct impact on time-sensitive
   policies and compression tasks.
+
+- **When `append` is enabled, be cautious while using `onOpen` and `onClose`
+  callbacks.** These callbacks might be employed to introduce headers and/or
+  footers to certain type of files, e.g., [CSV](https://en.wikipedia.org/wiki/Comma-separated_values).
+  Though one needs to avoid injecting the same header and/or footer multiple
+  times when a file is re-opened for append. Note that this is not a problem
+  for files opened/closed via rotation.
 
 # Contributors
 
