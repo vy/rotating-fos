@@ -1,4 +1,6 @@
-### (????-??-??) v0.8
+### (????-??-??) v0.9.0
+
+- Switched to semantic versioning scheme. (#10)
 
 - Overhauled tests.
 
@@ -11,6 +13,14 @@
 - Replaced `Timer` and `Thread` usage with a shared `ScheduledExecutorService`.
 
 - Fixed license discrepancies. (#3)
+
+### (2019-11-05) v0.8
+
+- Add Windows build to CI pipeline. (#4)
+
+- Switch from Travis CI to GitHub Actions. (#4)
+
+- Fix stream handling for Windows. (#4)
 
 ### (2019-06-13) v0.7
 
