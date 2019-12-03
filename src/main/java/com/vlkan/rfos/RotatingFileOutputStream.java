@@ -97,6 +97,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
 
         // Close the file. (Required before rename on Windows!)
+        callback.onClose(policy, instant, stream);
         stream.close();
 
         // Rename the file.
@@ -233,6 +234,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public synchronized void close() throws IOException {
+        config.getCallback().onClose(null, config.getClock().now(), stream);
         stream.close();
         stream = null;
     }

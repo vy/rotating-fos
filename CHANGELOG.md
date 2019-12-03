@@ -4,7 +4,7 @@
 
 - Improved documentation.
 
-- Added `RotationCallback#onOpen()` method. (#6)
+- Added `onOpen()` (#6) and `onClose()` (#9) methods to `RotationCallback`.
 
 - Removed timer-based invocation from `SizeBasedRotationPolicy`.
 

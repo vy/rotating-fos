@@ -306,33 +306,48 @@ public class RotatingFileOutputStreamTest {
                 .callback(callback)
                 .build();
 
-        // Create the 1st header injector.
-        byte[] header1 = {1, 2, 3, 4};
+        // Create the header injectors.
+        byte[] header1 = "header1".getBytes(StandardCharsets.UTF_8);
+        byte[] header2 = "header2".getBytes(StandardCharsets.UTF_8);
+        Assertions.assertThat(header1.length).isLessThan(maxByteCount);
+        Assertions.assertThat(header2.length).isLessThan(maxByteCount);
         Mockito
                 .doAnswer(invocation -> {
                     LOGGER.trace("injecting the 1st header");
                     OutputStream outputStream = invocation.getArgument(2);
                     outputStream.write(header1);
-                    outputStream.flush();
                     return null;
                 })
-                .when(callback)
-                .onOpen(Mockito.isNull(),
-                        Mockito.any(Instant.class),
-                        Mockito.any(OutputStream.class));
-
-        // Create the 2nd header injector.
-        byte[] header2 = {5, 6, 7, 8};
-        Mockito
                 .doAnswer(invocation -> {
                     LOGGER.trace("injecting the 2nd header");
                     OutputStream outputStream = invocation.getArgument(2);
                     outputStream.write(header2);
-                    outputStream.flush();
                     return null;
                 })
                 .when(callback)
-                .onOpen(Mockito.same(policy),
+                .onOpen(Mockito.any(),      // null at start
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
+
+        // Create the footer injectors.
+        byte[] footer1 = "footer1".getBytes(StandardCharsets.UTF_8);
+        byte[] footer2 = "footer2".getBytes(StandardCharsets.UTF_8);
+        Mockito
+                .doAnswer(invocation -> {
+                    LOGGER.trace("injecting the 1st footer");
+                    OutputStream outputStream = invocation.getArgument(2);
+                    outputStream.write(footer1);
+                    return null;
+                })
+                .doAnswer(invocation -> {
+                    LOGGER.trace("injecting the 2nd footer");
+                    OutputStream outputStream = invocation.getArgument(2);
+                    outputStream.write(footer2);
+                    return null;
+                })
+                .when(callback)
+                .onClose(
+                        Mockito.any(),      // null on user-invoked close()
                         Mockito.any(Instant.class),
                         Mockito.any(OutputStream.class));
 
@@ -356,14 +371,27 @@ public class RotatingFileOutputStreamTest {
 
         // Write the 2nd payload.
         LOGGER.trace("writing the 2nd payload");
-        byte[] payload2 = {9};
+        byte[] payload2 = {(byte) (payload1[payload1.length - 1] + 1)};
         stream.write(payload2);
-        stream.flush();
+
+        // Close the stream.
+        LOGGER.trace("closing");
+        stream.close();
 
         // Verify the rotation trigger.
         callbackInOrder
                 .verify(callback)
-                .onTrigger(Mockito.same(policy), Mockito.any(Instant.class));
+                .onTrigger(
+                        Mockito.same(policy),
+                        Mockito.any(Instant.class));
+
+        // Verify the rotation file close.
+        callbackInOrder
+                .verify(callback)
+                .onClose(
+                        Mockito.same(policy),
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
 
         // Verify the rotation file open.
         callbackInOrder
@@ -373,42 +401,63 @@ public class RotatingFileOutputStreamTest {
                         Mockito.any(OutputStream.class));
 
         // Verify the rotation.
-        Mockito
+        callbackInOrder
                 .verify(callback)
                 .onSuccess(
                         Mockito.same(policy),
                         Mockito.any(Instant.class),
                         Mockito.eq(rotatedFile));
 
+        // Verify the file close.
+        callbackInOrder
+                .verify(callback)
+                .onClose(
+                        Mockito.isNull(),
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
+
         // Verify the rotated file.
         long rotatedFileLength = rotatedFile.length();
-        Assertions.assertThat(rotatedFileLength).isEqualTo(maxByteCount);
-        byte[] rotatedFileBytes = new byte[Math.toIntExact(rotatedFileLength)];
-        try (FileInputStream rotatedFileInputStream = new FileInputStream(rotatedFile)) {
-            int readRotatedFileByteCount = rotatedFileInputStream.read(rotatedFileBytes);
-            Assertions.assertThat(readRotatedFileByteCount).isEqualTo(rotatedFileBytes.length);
-        }
-        byte[] expectedRotatedFileBytes = new byte[maxByteCount];
-        System.arraycopy(header1, 0, expectedRotatedFileBytes, 0, header1.length);
-        System.arraycopy(payload1, 0, expectedRotatedFileBytes, header1.length, payload1.length);
+        int expectedRotatedFileLength = header1.length + payload1.length + footer1.length;
+        Assertions.assertThat(rotatedFileLength).isEqualTo(expectedRotatedFileLength);
+        byte[] rotatedFileBytes = readFileBytes(rotatedFile, expectedRotatedFileLength);
+        byte[] expectedRotatedFileBytes = copyArrays(header1, payload1, footer1);
         Assertions.assertThat(rotatedFileBytes).isEqualTo(expectedRotatedFileBytes);
 
         // Verify the re-opened file.
         long reopenedFileLength = file.length();
-        Assertions.assertThat(reopenedFileLength).isEqualTo(header2.length + payload2.length);
-        byte[] reopenedFileBytes = new byte[Math.toIntExact(reopenedFileLength)];
-        try (FileInputStream reopenedFileInputStream = new FileInputStream(file)) {
-            int readReopenedFileByteCount = reopenedFileInputStream.read(reopenedFileBytes);
-            Assertions.assertThat(readReopenedFileByteCount).isEqualTo(reopenedFileBytes.length);
-        }
-        byte[] expectedReopenedFileBytes = new byte[header2.length + payload2.length];
-        System.arraycopy(header2, 0, expectedReopenedFileBytes, 0, header2.length);
-        System.arraycopy(payload2, 0, expectedReopenedFileBytes, header2.length, payload2.length);
+        int expectedReopenedFileLength = header2.length + payload2.length + footer2.length;
+        Assertions.assertThat(reopenedFileLength).isEqualTo(expectedReopenedFileLength);
+        byte[] reopenedFileBytes = readFileBytes(file, Math.toIntExact(reopenedFileLength));
+        byte[] expectedReopenedFileBytes = copyArrays(header2, payload2, footer2);
         Assertions.assertThat(reopenedFileBytes).isEqualTo(expectedReopenedFileBytes);
 
         // Verify no more interactions.
         Mockito.verifyNoMoreInteractions(callback);
 
+    }
+
+    private static byte[] readFileBytes(File file, int byteCount) throws IOException {
+        byte[] buffer = new byte[byteCount];
+        try (FileInputStream stream = new FileInputStream(file)) {
+            int readByteCount = stream.read(buffer);
+            Assertions.assertThat(readByteCount).isEqualTo(byteCount);
+        }
+        return buffer;
+    }
+
+    private static byte[] copyArrays(byte[]... sources) {
+        int targetLength = 0;
+        for (byte[] source : sources) {
+            targetLength += source.length;
+        }
+        byte[] target = new byte[targetLength];
+        int targetIndex = 0;
+        for (byte[] source : sources) {
+            System.arraycopy(source, 0, target, targetIndex, source.length);
+            targetIndex += source.length;
+        }
+        return target;
     }
 
 }
