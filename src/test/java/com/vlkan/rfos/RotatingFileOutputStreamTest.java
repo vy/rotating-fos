@@ -109,12 +109,25 @@ public class RotatingFileOutputStreamTest {
         Mockito.verify(policy, Mockito.never()).acceptWrite(Mockito.anyLong());
 
         // Trigger rotation.
+        LOGGER.trace("triggering rotation");
         stream.rotate(policy, now);
+
+        // Close the stream.
+        LOGGER.trace("closing stream");
+        stream.close();
 
         // Verify the rotation trigger.
         inOrder
                 .verify(callback)
                 .onTrigger(Mockito.same(policy), Mockito.same(now));
+
+        // Verify the rotation file close.
+        inOrder
+                .verify(callback)
+                .onClose(
+                        Mockito.same(policy),
+                        Mockito.same(now),
+                        Mockito.any(OutputStream.class));
 
         // Verify the rotation file open.
         inOrder
@@ -136,6 +149,16 @@ public class RotatingFileOutputStreamTest {
                 : payload.length;
         assertThat(rotatedFileLength).isEqualTo(expectedRotatedFileLength);
         assertThat(file.length()).isEqualTo(0);
+
+        // Verify the stream close. (We cannot use InOrder here since we don't
+        // know whether the rotation background task or the user-invoked close()
+        // will finish earlier.)
+        Mockito
+                .verify(callback)
+                .onClose(
+                        Mockito.isNull(),
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
 
         // Verify no more interactions.
         Mockito.verifyNoMoreInteractions(callback);
@@ -208,6 +231,14 @@ public class RotatingFileOutputStreamTest {
                 .onTrigger(
                         Mockito.same(policy),
                         Mockito.any(Instant.class));
+
+        // Verify the rotation file close.
+        callbackInOrder
+                .verify(callback)
+                .onClose(
+                        Mockito.same(policy),
+                        Mockito.any(Instant.class),
+                        Mockito.any(OutputStream.class));
 
         // Verify the rotation file open.
         callbackInOrder
@@ -375,7 +406,7 @@ public class RotatingFileOutputStreamTest {
         stream.write(payload2);
 
         // Close the stream.
-        LOGGER.trace("closing");
+        LOGGER.trace("closing stream");
         stream.close();
 
         // Verify the rotation trigger.
