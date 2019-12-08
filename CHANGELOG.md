@@ -1,4 +1,8 @@
-### (????-??-??) v0.9.0
+### (2019-12-08) v0.9.1
+
+- Added explicit Java 9 module name. (#11)
+
+### (2019-12-03) v0.9.0
 
 - Switched to semantic versioning scheme. (#10)
 

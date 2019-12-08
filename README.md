@@ -19,6 +19,8 @@ You first need to include `rotating-fos` in your Maven/Gradle dependencies:
 </dependency>
 ```
 
+(Note that the Java 9 module name is `com.vlkan.rfos`.)
+
 `RotatingFileOutputStream` does not extend `java.io.FileOutputStream` (as a
 deliberate design decision, see [How (not) to extend standard collection
 classes](https://javachannel.org/posts/how-not-to-extend-standard-collection-classes/)),
@@ -128,7 +130,7 @@ methods.
 # Contributors
 
 - [Christoph (pitschr) Pitschmann](https://github.com/pitschr) (Windows-specific
-  fixes, `RotationCallback#onOpen()` method)
+  fixes, `RotationCallback#onOpen()` method, Java 9 module name)
 - [Jonas (yawkat) Konrad](https://yawk.at/) (`RotatingFileOutputStream`
   thread-safety improvements)
 - [Lukas Bradley](https://github.com/lukasbradley/)
