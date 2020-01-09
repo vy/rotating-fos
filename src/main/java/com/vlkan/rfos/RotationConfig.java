@@ -38,12 +38,14 @@ public class RotationConfig {
                     threadCount,
                     new ThreadFactory() {
 
-                        private volatile int threadCount = 0;
+                        private int threadCount = 0;
 
                         @Override
                         public synchronized Thread newThread(Runnable runnable) {
                             String name = String.format("RotationJanitor-%02d", ++threadCount);
-                            return new Thread(runnable, name);
+                            Thread thread = new Thread(runnable, name);
+                            thread.setDaemon(true);
+                            return thread;
                         }
 
                     });

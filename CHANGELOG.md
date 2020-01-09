@@ -1,3 +1,7 @@
+### (2020-??-??) v0.9.2
+
+- Shutdown the default `ScheduledExecutorService` at JVM exit. (#12)
+
 ### (2019-12-08) v0.9.1
 
 - Added explicit Java 9 module name. (#11)
