@@ -1,4 +1,4 @@
-### (2020-??-??) v0.9.2
+### (2020-01-10) v0.9.2
 
 - Shutdown the default `ScheduledExecutorService` at JVM exit. (#12)
 
