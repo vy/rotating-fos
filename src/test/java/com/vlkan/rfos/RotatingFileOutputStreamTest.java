@@ -16,16 +16,9 @@
 
 package com.vlkan.rfos;
 
-import com.vlkan.rfos.policy.RotationPolicy;
-import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
-import org.assertj.core.api.Assertions;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.InOrder;
-import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -33,11 +26,25 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.assertj.core.api.Assertions;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.internal.ArrayComparisonFailure;
+import org.junit.rules.TemporaryFolder;
+import org.mockito.InOrder;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.vlkan.rfos.policy.RotationPolicy;
+import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
 
 public class RotatingFileOutputStreamTest {
 
@@ -490,5 +497,56 @@ public class RotatingFileOutputStreamTest {
         }
         return target;
     }
+    
+    @Test
+    public void rollingFileTest() throws Exception {
+    	LOGGER.debug("rollingFileTest begin");
+    	File dir = Paths.get(tmpDir.getRoot().toString(), "rollingFileTest").toFile();
+    	dir.mkdir();
+    	int maxByteCount = 10;
+		int maxBackupIndex = 10;
+		String fileName = "app.log";
+		RotationConfig config = RotationConfig
+	        .builder()
+	        .file(dir + File.separator + fileName)
+	        .rollingFile(true)
+	        .policy(new SizeBasedRotationPolicy(maxByteCount))
+	        .maxBackupIndex(maxBackupIndex )
+	        .build();
+		try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
+			for (int i = 0; i < 50; i++) {
+				stream.write(String.format("a%04d",i).getBytes(StandardCharsets.UTF_8));
+			}
+		}
+		
+		File[] outputFiles = dir.listFiles();
+		assertEquals("maxBackupIndex value not as expected", maxBackupIndex + 1, outputFiles.length);
+		Map<String, String> suffixToContent = new HashMap<>();
+		suffixToContent.put("", "a0048a0049");
+		suffixToContent.put(".1", "a0046a0047");
+		suffixToContent.put(".10", "a0028a0029");
+		int validatedCount = 0;
+		for (File file : outputFiles) {
+			LOGGER.debug("Validating file: {}", file);
+			String suffix = file.getName().substring(fileName.length());
+			LOGGER.debug("suffix: {}", suffix);
+			String expectedContent = suffixToContent.get(suffix);
+			if (expectedContent != null &&(fileName + suffix).equals(file.getName())) {
+				LOGGER.debug("Validating file content for: {}", fileName);
+				validateContent(maxByteCount, fileName, file, expectedContent);
+				validatedCount++;
+			}
+		}
+		assertEquals("Did not validate content of all files", validatedCount, suffixToContent.size());
+		LOGGER.debug("rollingFileTest end");
+    }
+
+	private void validateContent(int maxByteCount, String fileName, File file, String expectedContent)
+			throws IOException, ArrayComparisonFailure {
+		byte[] fileBytes = readFileBytes(file, maxByteCount);
+		byte[] expectedBytes = expectedContent.getBytes(StandardCharsets.UTF_8);
+		assertArrayEquals("File content not as expected for: " + fileName + ". Expected: " + 
+			new String(expectedBytes, StandardCharsets.UTF_8) + ", actual: " + new String(fileBytes, StandardCharsets.UTF_8), expectedBytes, fileBytes);
+	}
 
 }

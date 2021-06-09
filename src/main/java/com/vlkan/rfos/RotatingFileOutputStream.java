@@ -16,14 +16,24 @@
 
 package com.vlkan.rfos;
 
-import com.vlkan.rfos.policy.RotationPolicy;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.zip.GZIPOutputStream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.time.Instant;
-import java.util.*;
-import java.util.zip.GZIPOutputStream;
+import com.vlkan.rfos.policy.RotationPolicy;
 
 public class RotatingFileOutputStream extends OutputStream implements Rotatable {
 
@@ -101,16 +111,57 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         stream.close();
 
         // Rename the file.
-        File rotatedFile = config.getFilePattern().create(instant).getAbsoluteFile();
-        LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
-        boolean renamed = config.getFile().renameTo(rotatedFile);
+        File rotatedFile = null;
+        boolean renamed = false;
+        
+        if (config.isRollingFile()) {
+        	int maxBackupIndex = config.getMaxBackupIndex();
+        	LOGGER.debug("Rotating using rolling file, maxBackupIndex: {}", maxBackupIndex);
+        	renamed = true;
+    		String parent = config.getFile().getParent();
+    		if (parent == null) {
+    			parent = ".";
+    		}
+			File file = Paths.get(parent,
+				config.getFile().getName() + '.' + maxBackupIndex).toFile();
+    		if (file.exists()) {
+    			LOGGER.debug("Deleting oldest file: {}", file);
+    			renamed = file.delete();
+    		}
+    		
+    		// Map {(maxBackupIndex - 1), ..., 2, 1} to {maxBackupIndex, ..., 3, 2}
+    		for (int i = maxBackupIndex - 1; i >= 1 && renamed; i--) {
+    			file = Paths.get(parent,
+    				config.getFile().getName() + '.' + i).toFile();
+    			if (file.exists()) {
+    				rotatedFile = Paths.get(parent,
+        				config.getFile().getName() + '.' + (i+1)).toFile();
+    				LOGGER.debug("Renaming file {} to {}", file, rotatedFile);
+    				renamed = file.renameTo(rotatedFile);
+    			}
+    		}
+
+    		if(renamed) {
+    			rotatedFile =  Paths.get(parent,
+    				config.getFile().getName() + '.' + 1).toFile();
+    			file = Paths.get(parent,
+    				config.getFile().getName()).toFile();
+    			LOGGER.debug("Renaming file {} to {}", file, rotatedFile);
+    			renamed = file.renameTo(rotatedFile);
+    		}
+        } else {
+        	rotatedFile = config.getFilePattern().create(instant).getAbsoluteFile();
+            LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
+            renamed = config.getFile().renameTo(rotatedFile);
+        }
+        
         if (!renamed) {
             String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
             IOException error = new IOException(message);
             callback.onFailure(policy, instant, rotatedFile, error);
             return;
         }
-
+        
         // Re-open the file.
         LOGGER.debug("re-opening file {file={}}", config.getFile());
         stream = open(policy, instant);
