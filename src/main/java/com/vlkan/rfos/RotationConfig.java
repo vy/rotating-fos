@@ -16,8 +16,6 @@
 
 package com.vlkan.rfos;
 
-import com.vlkan.rfos.policy.RotationPolicy;
-
 import java.io.File;
 import java.util.LinkedHashSet;
 import java.util.Objects;
@@ -26,6 +24,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 
+import com.vlkan.rfos.policy.RotationPolicy;
+import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
+
+/**
+ * RotationConfig
+ * 
+ * rollingFile - rolling file by indexes, based on SizeBasedRotationPolicy, similar to log4j RollingFileAppender.
+ */
 public class RotationConfig {
 
     private enum DefaultExecutorServiceHolder {;
@@ -71,6 +77,10 @@ public class RotationConfig {
     private final boolean append;
 
     private final boolean compress;
+    
+    private final boolean rollingFile;
+    
+    private final Integer maxBackupIndex;
 
     private final Clock clock;
 
@@ -83,6 +93,8 @@ public class RotationConfig {
         this.policies = builder.policies;
         this.append = builder.append;
         this.compress = builder.compress;
+        this.rollingFile = builder.rollingFile;
+        this.maxBackupIndex = builder.maxBackupIndex;
         this.clock = builder.clock;
         this.callback = builder.callback;
     }
@@ -115,7 +127,15 @@ public class RotationConfig {
         return compress;
     }
 
-    public Clock getClock() {
+    public boolean isRollingFile() {
+		return rollingFile;
+	}
+
+	public Integer getMaxBackupIndex() {
+		return maxBackupIndex;
+	}
+
+	public Clock getClock() {
         return clock;
     }
 
@@ -130,6 +150,8 @@ public class RotationConfig {
         RotationConfig that = (RotationConfig) instance;
         return append == that.append &&
                 compress == that.compress &&
+        		rollingFile == that.rollingFile &&
+				Objects.equals(maxBackupIndex, that.maxBackupIndex) &&
                 Objects.equals(file, that.file) &&
                 Objects.equals(filePattern, that.filePattern) &&
                 Objects.equals(executorService, that.executorService) &&
@@ -140,7 +162,7 @@ public class RotationConfig {
 
     @Override
     public int hashCode() {
-        return Objects.hash(file, filePattern, executorService, policies, append, compress, clock, callback);
+        return Objects.hash(file, filePattern, executorService, policies, append, compress, rollingFile, maxBackupIndex, clock, callback);
     }
 
     @Override
@@ -165,6 +187,9 @@ public class RotationConfig {
         private boolean append = true;
 
         private boolean compress = false;
+        
+        private boolean rollingFile = false;
+        private Integer maxBackupIndex = null;
 
         private Clock clock = SystemClock.getInstance();
 
@@ -221,6 +246,16 @@ public class RotationConfig {
             this.compress = compress;
             return this;
         }
+        
+        public Builder rollingFile(boolean rollingFile) {
+            this.rollingFile = rollingFile;
+            return this;
+        }
+        
+        public Builder maxBackupIndex(int maxBackupIndex) {
+            this.maxBackupIndex = maxBackupIndex;
+            return this;
+        }
 
         public Builder clock(Clock clock) {
             this.clock = clock;
@@ -246,9 +281,29 @@ public class RotationConfig {
 
         private void validate() {
             Objects.requireNonNull(file, "file");
-            Objects.requireNonNull(filePattern, "filePattern");
-            if (policies == null || policies.isEmpty()) {
-                throw new IllegalArgumentException("empty policies");
+            if (rollingFile) {
+            	boolean singleRotationPolicy = false;
+            	if (policies != null && policies.size() == 1) {
+            		RotationPolicy rotationPolicy = policies.iterator().next();
+            		if (rotationPolicy instanceof SizeBasedRotationPolicy) {
+            			singleRotationPolicy = true;
+            		}
+            	}
+            	if (!singleRotationPolicy) {
+            		throw new IllegalArgumentException("Expecting single SizeBasedRotationPolicy when using rollingFile.");
+            	}
+            	if (filePattern != null) {
+            		throw new IllegalArgumentException("filePattern cannot be set when using rollingFile.");
+            	}
+            	Objects.requireNonNull(maxBackupIndex, "maxBackupIndex");
+            	if (maxBackupIndex <= 0) {
+            		throw new IllegalArgumentException("maxBackupIndex is out of range, must be positive.");
+            	}
+            } else {
+	            Objects.requireNonNull(filePattern, "filePattern");
+	            if (policies == null || policies.isEmpty()) {
+	                throw new IllegalArgumentException("empty policies");
+	            }
             }
             Objects.requireNonNull(clock, "clock");
             Objects.requireNonNull(callback, "callback");

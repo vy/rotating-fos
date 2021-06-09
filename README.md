@@ -50,6 +50,7 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 | `executorService(ScheduledExecutorService)` | scheduler for time-based policies and compression tasks |
 | `append(boolean)` | append while opening the `file` (defaults to `true`) |
 | `compress(boolean)` | GZIP compression after rotation (defaults to `false`) |
+| `rollingFile(boolean)` | rolling file by indexes, based on SizeBasedRotationPolicy, similar to log4j RollingFileAppender. (defaults to `false`) |
 | `clock(Clock)` | clock for retrieving date and time (defaults to `SystemClock`) |
 | `callback(RotationCallback)` | rotation callback (defaults to `LoggingRotationCallback`) |
 
@@ -135,6 +136,7 @@ methods.
 - [Jonas (yawkat) Konrad](https://yawk.at/) (`RotatingFileOutputStream`
   thread-safety improvements)
 - [Lukas Bradley](https://github.com/lukasbradley/)
+- [Liran Mendelovich](https://github.com/liran2000/) (`rollingFile` enhancement)
 
 # License
 
