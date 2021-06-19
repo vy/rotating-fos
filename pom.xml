@@ -80,7 +80,7 @@
         <!-- library versions -->
         <assertj-core.version>3.20.2</assertj-core.version>
         <errorprone.version>2.6.0</errorprone.version>
-        <junit.version>4.13.2</junit.version>
+        <junit.version>5.8.0-M1</junit.version>
         <log4j.version>2.14.1</log4j.version>
         <mockito.version>3.11.2</mockito.version>
         <slf4j.version>1.7.32</slf4j.version>
@@ -93,6 +93,7 @@
         <maven-javadoc-plugin.version>3.3.0</maven-javadoc-plugin.version>
         <maven-release-plugin.version>3.0.0-M4</maven-release-plugin.version>
         <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
+        <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
         <versions-maven-plugin.version>2.8.1</versions-maven-plugin.version>
 
     </properties>
@@ -113,8 +114,8 @@
         </dependency>
 
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
@@ -193,6 +194,12 @@
                 <configuration>
                     <rulesUri>${project.baseUri}/maven-version-rules.xml</rulesUri>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
             </plugin>
 
             <plugin>

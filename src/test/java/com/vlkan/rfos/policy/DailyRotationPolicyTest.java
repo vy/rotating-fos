@@ -20,7 +20,7 @@ import com.vlkan.rfos.Clock;
 import com.vlkan.rfos.Rotatable;
 import com.vlkan.rfos.RotatingFilePattern;
 import com.vlkan.rfos.RotationConfig;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -33,12 +33,12 @@ import java.time.Instant;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class DailyRotationPolicyTest {
+class DailyRotationPolicyTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DailyRotationPolicyTest.class);
 
     @Test
-    public void test() {
+    void test() {
 
         // Create the scheduler mock.
         ScheduledExecutorService executorService = Mockito.mock(ScheduledExecutorService.class);

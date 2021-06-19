@@ -19,9 +19,8 @@ package com.vlkan.rfos;
 import com.vlkan.rfos.policy.RotationPolicy;
 import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
 import org.assertj.core.api.Assertions;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -39,20 +38,20 @@ import java.util.zip.GZIPOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class RotatingFileOutputStreamTest {
+class RotatingFileOutputStreamTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RotatingFileOutputStreamTest.class);
 
-    @Rule
-    public TemporaryFolder tmpDir = new TemporaryFolder();
+    @TempDir
+    public File tmpDir;
 
     @Test
-    public void test_write_insensitive_policy() throws Exception {
+    void test_write_insensitive_policy() throws Exception {
         test_write_insensitive_policy(false);
     }
 
     @Test
-    public void test_write_insensitive_policy_with_compression() throws Exception {
+    void test_write_insensitive_policy_with_compression() throws Exception {
         test_write_insensitive_policy(true);
     }
 
@@ -60,9 +59,9 @@ public class RotatingFileOutputStreamTest {
 
         // Determine file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(tmpDir.getRoot(), className + ".log");
+        File file = new File(tmpDir, className + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
         String rotatedFileNameSuffix = compress ? ".gz" : "";
         Instant now = Instant.now();
         File rotatedFile = new File(
@@ -178,13 +177,13 @@ public class RotatingFileOutputStreamTest {
     }
 
     @Test
-    public void test_write_sensitive_policy() throws Exception {
+    void test_write_sensitive_policy() throws Exception {
 
         // Determine file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(tmpDir.getRoot(), className + ".log");
+        File file = new File(tmpDir, className + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
         File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))));
 
         // Create the stream.
@@ -263,13 +262,13 @@ public class RotatingFileOutputStreamTest {
     }
 
     @Test
-    public void test_empty_files_are_not_rotated() throws Exception {
+    void test_empty_files_are_not_rotated() throws Exception {
 
         // Determine file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(tmpDir.getRoot(), className + ".log");
+        File file = new File(tmpDir, className + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
 
         // Create the stream.
         int maxByteCount = 1024;
@@ -315,13 +314,13 @@ public class RotatingFileOutputStreamTest {
     }
 
     @Test
-    public void test_adding_file_header() throws IOException {
+    void test_adding_file_header() throws IOException {
 
         // Determine file names.
         String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(tmpDir.getRoot(), className + ".log");
+        File file = new File(tmpDir, className + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(tmpDir.getRoot(), className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
         File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))));
 
         // Create the stream config.

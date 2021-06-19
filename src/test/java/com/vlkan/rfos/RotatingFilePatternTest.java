@@ -17,7 +17,7 @@
 package com.vlkan.rfos;
 
 import org.assertj.core.api.ThrowableAssert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Instant;
@@ -29,10 +29,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class RotatingFilePatternTest {
+class RotatingFilePatternTest {
 
     @Test
-    public void test_invalid_patterns() {
+    void test_invalid_patterns() {
         String[] invalidPatterns = new String[]{
                 "",
                 "-",
@@ -61,7 +61,7 @@ public class RotatingFilePatternTest {
     }
 
     @Test
-    public void test_valid_patterns() {
+    void test_valid_patterns() {
         Instant instant = Instant.now();
         Map<String, File> fileByPattern = new LinkedHashMap<>();
         fileByPattern.put("%d{yyyy-MM-dd}", new File(formatInstant("yyyy-MM-dd", instant)));

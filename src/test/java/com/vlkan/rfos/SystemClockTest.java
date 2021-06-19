@@ -16,7 +16,7 @@
 
 package com.vlkan.rfos;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -26,7 +26,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class SystemClockTest {
+class SystemClockTest {
 
     private abstract static class GenericTest implements Runnable {
 
@@ -63,7 +63,7 @@ public class SystemClockTest {
     }
 
     @Test
-    public void test_midnight() {
+    void test_midnight() {
 
         // Create test cases.
         Map<String, List<String>> currentInstantTextsByExpectedInstantText = new LinkedHashMap<>();
@@ -104,7 +104,7 @@ public class SystemClockTest {
     }
 
     @Test
-    public void test_sundayMidnight() {
+    void test_sundayMidnight() {
 
         // Create test cases.
         Map<String, List<String>> currentInstantTextsByExpectedInstantText = new LinkedHashMap<>();

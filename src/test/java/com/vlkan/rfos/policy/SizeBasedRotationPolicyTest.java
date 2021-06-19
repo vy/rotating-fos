@@ -17,12 +17,12 @@
 package com.vlkan.rfos.policy;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class SizeBasedRotationPolicyTest {
+class SizeBasedRotationPolicyTest {
 
     @Test
-    public void test_invalid_maxByteCount() {
+    void test_invalid_maxByteCount() {
         for (int invalidMaxByteCount : new int[] {-1, 0}) {
             Assertions
                     .assertThatThrownBy(() -> new SizeBasedRotationPolicy(invalidMaxByteCount))

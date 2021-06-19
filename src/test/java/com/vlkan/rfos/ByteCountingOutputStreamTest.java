@@ -17,19 +17,19 @@
 package com.vlkan.rfos;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Random;
 
-public class ByteCountingOutputStreamTest {
+class ByteCountingOutputStreamTest {
 
     private static final Random RANDOM = new Random(0);
 
     @Test
-    public void test() throws IOException {
+    void test() throws IOException {
         for (int testIndex = 0; testIndex < 100; testIndex++) {
             int textSize = RANDOM.nextInt(1024 * 1024);
             String text = generateRandomString(textSize);
