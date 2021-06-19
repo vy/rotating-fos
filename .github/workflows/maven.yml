@@ -47,10 +47,10 @@ jobs:
           architecture: x64
 
       - name: Build with Maven
-        run: mvn -B verify
+        run: ./mvnw -B verify
 
       - name: Test scheduler shutdown
         timeout-minutes: 1
         # pwsh (the default shell on Windows) hijacks "exec" keyword
         shell: bash
-        run: mvn exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.vlkan.rfos.SchedulerShutdownTestApp
+        run: ./mvnw exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.vlkan.rfos.SchedulerShutdownTestApp
