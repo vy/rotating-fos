@@ -20,7 +20,7 @@
 
     <groupId>com.vlkan.rfos</groupId>
     <artifactId>rotating-fos</artifactId>
-    <version>0.9.3-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
 
     <name>RotatingFileOutputStream</name>
     <description>Sneakily rotating your FileOutputStream since 2017.</description>

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-package com.vlkan.rfos;
-
+package com.vlkan.rfos.callback;
+import com.vlkan.rfos.RotatingFileOutputStream;
 import com.vlkan.rfos.policy.RotationPolicy;
 
 import java.io.File;

@@ -16,6 +16,8 @@
 
 package com.vlkan.rfos;
 
+import com.vlkan.rfos.callback.LoggingRotationCallback;
+import com.vlkan.rfos.callback.RotationCallback;
 import com.vlkan.rfos.policy.RotationPolicy;
 
 import java.io.File;
@@ -119,16 +121,6 @@ public class RotationConfig {
 
     public Clock getClock() {
         return clock;
-    }
-
-    /**
-     * Returns the first callback in the registered set of callbacks.
-     *
-     * @deprecated This method is kept for backward-compatibility reasons, use {@link #getCallbacks()} instead.
-     */
-    @Deprecated
-    public RotationCallback getCallback() {
-        return callbacks.iterator().next();
     }
 
     public Set<RotationCallback> getCallbacks() {

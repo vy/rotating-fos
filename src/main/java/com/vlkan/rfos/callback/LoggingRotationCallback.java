@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.vlkan.rfos;
+package com.vlkan.rfos.callback;
 
 import com.vlkan.rfos.policy.RotationPolicy;
 import org.slf4j.Logger;

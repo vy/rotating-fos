@@ -16,6 +16,8 @@
 
 package com.vlkan.rfos;
 
+import com.vlkan.rfos.callback.LoggingRotationCallback;
+import com.vlkan.rfos.callback.RotationCallback;
 import com.vlkan.rfos.policy.TimeBasedRotationPolicy;
 import org.mockito.Mockito;
 import org.slf4j.Logger;

@@ -16,6 +16,7 @@
 
 package com.vlkan.rfos;
 
+import com.vlkan.rfos.callback.RotationCallback;
 import com.vlkan.rfos.policy.RotationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
