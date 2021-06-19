@@ -51,7 +51,7 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 | `append(boolean)` | append while opening the `file` (defaults to `true`) |
 | `compress(boolean)` | GZIP compression after rotation (defaults to `false`) |
 | `clock(Clock)` | clock for retrieving date and time (defaults to `SystemClock`) |
-| `callback(RotationCallback)` | rotation callback (defaults to `LoggingRotationCallback`) |
+| `callback(RotationCallback)`<br/>`callbacks(Set<RotationCallback>)` | rotation callbacks (defaults to `LoggingRotationCallback`) |
 
 The default `ScheduledExecutorService` can be retrieved via
 `RotationConfig#getDefaultExecutorService()`, which is a

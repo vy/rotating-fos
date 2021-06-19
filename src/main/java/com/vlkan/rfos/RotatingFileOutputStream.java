@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.zip.GZIPOutputStream;
 
 public class RotatingFileOutputStream extends OutputStream implements Rotatable {
@@ -61,7 +62,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     private ByteCountingOutputStream open(RotationPolicy policy, Instant instant) {
         try {
             FileOutputStream fileOutputStream = new FileOutputStream(config.getFile(), config.isAppend());
-            config.getCallback().onOpen(policy, instant, fileOutputStream);
+            invokeCallbacks(callback -> callback.onOpen(policy, instant, fileOutputStream));
             long size = config.isAppend() ? config.getFile().length() : 0;
             return new ByteCountingOutputStream(fileOutputStream, size);
         } catch (IOException error) {
@@ -77,7 +78,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         } catch (Exception error) {
             String message = String.format("rotation failure {instant=%s}", instant);
             RuntimeException extendedError = new RuntimeException(message, error);
-            config.getCallback().onFailure(policy, instant, null, extendedError);
+            invokeCallbacks(callback -> callback.onFailure(policy, instant, null, extendedError));
         }
     }
 
@@ -86,9 +87,8 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         // Check arguments.
         Objects.requireNonNull(instant, "instant");
 
-        // Notify the trigger listener.
-        RotationCallback callback = config.getCallback();
-        callback.onTrigger(policy, instant);
+        // Notify the trigger listeners.
+        invokeCallbacks(callback -> callback.onTrigger(policy, instant));
 
         // Skip rotation if the file is empty.
         if (config.getFile().length() == 0) {
@@ -97,7 +97,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
 
         // Close the file. (Required before rename on Windows!)
-        callback.onClose(policy, instant, stream);
+        invokeCallbacks(callback -> callback.onClose(policy, instant, stream));
         stream.close();
 
         // Rename the file.
@@ -107,7 +107,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         if (!renamed) {
             String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
             IOException error = new IOException(message);
-            callback.onFailure(policy, instant, rotatedFile, error);
+            invokeCallbacks(callback -> callback.onFailure(policy, instant, rotatedFile, error));
             return;
         }
 
@@ -117,16 +117,16 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
         // Compress the old file, if necessary.
         if (config.isCompress()) {
-            asyncCompress(policy, instant, rotatedFile, callback);
+            asyncCompress(policy, instant, rotatedFile);
             return;
         }
 
         // So far, so good;
-        callback.onSuccess(policy, instant, rotatedFile);
+        invokeCallbacks(callback -> callback.onSuccess(policy, instant, rotatedFile));
 
     }
 
-    private void asyncCompress(RotationPolicy policy, Instant instant, File rotatedFile, RotationCallback callback) {
+    private void asyncCompress(RotationPolicy policy, Instant instant, File rotatedFile) {
         config.getExecutorService().execute(new Runnable() {
 
             private final String displayName =
@@ -139,13 +139,13 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
                 File compressedFile = getCompressedFile(rotatedFile);
                 try {
                     unsafeSyncCompress(rotatedFile, compressedFile);
-                    callback.onSuccess(policy, instant, compressedFile);
+                    invokeCallbacks(callback -> callback.onSuccess(policy, instant, compressedFile));
                 } catch (Exception error) {
                     String message = String.format(
                             "compression failure {instant=%s, rotatedFile=%s, compressedFile=%s}",
                             instant, rotatedFile, compressedFile);
                     RuntimeException extendedError = new RuntimeException(message, error);
-                    callback.onFailure(policy, instant, rotatedFile, extendedError);
+                    invokeCallbacks(callback -> callback.onFailure(policy, instant, rotatedFile, extendedError));
                 }
             }
 
@@ -234,9 +234,15 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public synchronized void close() throws IOException {
-        config.getCallback().onClose(null, config.getClock().now(), stream);
+        invokeCallbacks(callback -> callback.onClose(null, config.getClock().now(), stream));
         stream.close();
         stream = null;
+    }
+
+    private void invokeCallbacks(Consumer<RotationCallback> invoker) {
+        for (RotationCallback callback : config.getCallbacks()) {
+            invoker.accept(callback);
+        }
     }
 
     @Override

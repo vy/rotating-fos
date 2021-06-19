@@ -19,6 +19,8 @@ package com.vlkan.rfos;
 import com.vlkan.rfos.policy.RotationPolicy;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -74,17 +76,17 @@ public class RotationConfig {
 
     private final Clock clock;
 
-    private final RotationCallback callback;
+    private final Set<RotationCallback> callbacks;
 
     private RotationConfig(Builder builder) {
         this.file = builder.file;
         this.filePattern = builder.filePattern;
         this.executorService = builder.executorService;
-        this.policies = builder.policies;
+        this.policies = Collections.unmodifiableSet(builder.policies);
         this.append = builder.append;
         this.compress = builder.compress;
         this.clock = builder.clock;
-        this.callback = builder.callback;
+        this.callbacks = Collections.unmodifiableSet(builder.callbacks);
     }
 
     public File getFile() {
@@ -119,8 +121,18 @@ public class RotationConfig {
         return clock;
     }
 
+    /**
+     * Returns the first callback in the registered set of callbacks.
+     *
+     * @deprecated This method is kept for backward-compatibility reasons, use {@link #getCallbacks()} instead.
+     */
+    @Deprecated
     public RotationCallback getCallback() {
-        return callback;
+        return callbacks.iterator().next();
+    }
+
+    public Set<RotationCallback> getCallbacks() {
+        return callbacks;
     }
 
     @Override
@@ -135,12 +147,12 @@ public class RotationConfig {
                 Objects.equals(executorService, that.executorService) &&
                 Objects.equals(policies, that.policies) &&
                 Objects.equals(clock, that.clock) &&
-                Objects.equals(callback, that.callback);
+                Objects.equals(callbacks, that.callbacks);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(file, filePattern, executorService, policies, append, compress, clock, callback);
+        return Objects.hash(file, filePattern, executorService, policies, append, compress, clock, callbacks);
     }
 
     @Override
@@ -168,7 +180,9 @@ public class RotationConfig {
 
         private Clock clock = SystemClock.getInstance();
 
-        private RotationCallback callback = LoggingRotationCallback.getInstance();
+        private Set<RotationCallback> callbacks =
+                new HashSet<>(Collections.singleton(
+                        LoggingRotationCallback.getInstance()));
 
         private Builder() {
             // Do nothing.
@@ -228,7 +242,13 @@ public class RotationConfig {
         }
 
         public Builder callback(RotationCallback callback) {
-            this.callback = callback;
+            Objects.requireNonNull(callback, "callback");
+            callbacks.add(callback);
+            return this;
+        }
+
+        public Builder callbacks(Set<RotationCallback> callbacks) {
+            this.callbacks = callbacks;
             return this;
         }
 
@@ -251,7 +271,7 @@ public class RotationConfig {
                 throw new IllegalArgumentException("empty policies");
             }
             Objects.requireNonNull(clock, "clock");
-            Objects.requireNonNull(callback, "callback");
+            Objects.requireNonNull(callbacks, "callbacks");
         }
 
     }
