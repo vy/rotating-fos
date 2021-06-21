@@ -37,7 +37,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     private volatile ByteCountingOutputStream stream;
 
     public RotatingFileOutputStream(RotationConfig config) {
-        this.config = config;
+        this.config = Objects.requireNonNull(config, "config");
         this.writeSensitivePolicies = collectWriteSensitivePolicies(config.getPolicies());
         this.stream = open(null, config.getClock().now());
         startPolicies();
