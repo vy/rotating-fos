@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.zip.GZIPOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -488,6 +489,77 @@ class RotatingFileOutputStreamTest {
             targetIndex += source.length;
         }
         return target;
+    }
+
+    @Test
+    void test_rotation_and_write_failure_after_close() throws Exception {
+
+        // Determine file names.
+        String className = RotatingFileOutputStream.class.getSimpleName();
+        File file = new File(tmpDir, className + ".log");
+        String fileName = file.getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
+
+        // Create the stream config.
+        RotationPolicy policy = Mockito.mock(RotationPolicy.class);
+        RotationCallback callback = Mockito.mock(RotationCallback.class);
+        RotationConfig config = RotationConfig
+                .builder()
+                .file(fileName)
+                .filePattern(fileNamePattern)
+                .policy(policy)
+                .callbacks(Collections.singleton(callback))
+                .build();
+
+        // Create the stream, write some, and close it.
+        RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
+        stream.write("payload".getBytes(StandardCharsets.UTF_8));
+        stream.close();
+
+        // Verify rotation failure.
+        InOrder inOrder = Mockito.inOrder(callback);
+        stream.rotate(null, Instant.now());
+        inOrder
+                .verify(callback)
+                .onFailure(
+                        Mockito.any(),
+                        Mockito.any(),
+                        Mockito.any(),
+                        Mockito.argThat(error -> {
+                            Throwable cause = error.getCause();
+                            return cause instanceof IOException &&
+                                    cause
+                                            .getMessage()
+                                            .contains("either closed or not initialized yet");
+                        }));
+
+        // Verify write(int) failure.
+        Assertions
+                .assertThatThrownBy(() -> stream.write(1))
+                .isInstanceOf(IOException.class)
+                .hasMessage("either closed or not initialized yet");
+
+        // Verify write(byte[]) failure.
+        Assertions
+                .assertThatThrownBy(() -> stream.write(new byte[]{0}))
+                .isInstanceOf(IOException.class)
+                .hasMessage("either closed or not initialized yet");
+
+        // Verify write(byte[], int, int) failure.
+        Assertions
+                .assertThatThrownBy(() -> stream.write(new byte[]{0}, 0, 1))
+                .isInstanceOf(IOException.class)
+                .hasMessage("either closed or not initialized yet");
+
+        // Verify no more failures were reported to the callback.
+        inOrder
+                .verify(callback, Mockito.never())
+                .onFailure(
+                        Mockito.any(),
+                        Mockito.any(),
+                        Mockito.any(),
+                        Mockito.any());
+
     }
 
 }

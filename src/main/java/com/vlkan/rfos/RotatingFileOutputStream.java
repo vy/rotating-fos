@@ -87,6 +87,9 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         // Check arguments.
         Objects.requireNonNull(instant, "instant");
 
+        // Check the state.
+        unsafeCheckStream();
+
         // Notify the trigger listeners.
         invokeCallbacks(callback -> callback.onTrigger(policy, instant));
 
@@ -198,6 +201,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public synchronized void write(int b) throws IOException {
+        unsafeCheckStream();
         long byteCount = stream.size() + 1;
         notifyWriteSensitivePolicies(byteCount);
         stream.write(b);
@@ -205,6 +209,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public synchronized void write(byte[] b) throws IOException {
+        unsafeCheckStream();
         long byteCount = stream.size() + b.length;
         notifyWriteSensitivePolicies(byteCount);
         stream.write(b);
@@ -212,6 +217,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public synchronized void write(byte[] b, int off, int len) throws IOException {
+        unsafeCheckStream();
         long byteCount = stream.size() + len;
         notifyWriteSensitivePolicies(byteCount);
         stream.write(b, off, len);
@@ -229,11 +235,16 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     @Override
     public synchronized void flush() throws IOException {
-        stream.flush();
+        if (stream != null) {
+            stream.flush();
+        }
     }
 
     @Override
     public synchronized void close() throws IOException {
+        if (stream == null) {
+            return;
+        }
         invokeCallbacks(callback -> callback.onClose(null, config.getClock().now(), stream));
         stream.close();
         stream = null;
@@ -242,6 +253,12 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     private void invokeCallbacks(Consumer<RotationCallback> invoker) {
         for (RotationCallback callback : config.getCallbacks()) {
             invoker.accept(callback);
+        }
+    }
+
+    private void unsafeCheckStream() throws IOException {
+        if (stream == null) {
+            throw new IOException("either closed or not initialized yet");
         }
     }
 
