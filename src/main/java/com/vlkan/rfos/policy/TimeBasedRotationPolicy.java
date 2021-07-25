@@ -23,9 +23,12 @@ import org.slf4j.Logger;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public abstract class TimeBasedRotationPolicy implements RotationPolicy {
+
+    private volatile ScheduledFuture<?> scheduledFuture;
 
     @Override
     public boolean isWriteSensitive() {
@@ -38,14 +41,16 @@ public abstract class TimeBasedRotationPolicy implements RotationPolicy {
     }
 
     @Override
-    public void start(Rotatable rotatable) {
+    public synchronized void start(Rotatable rotatable) {
         RotationConfig config = rotatable.getConfig();
         Clock clock = config.getClock();
         Instant currentInstant = clock.now();
         Instant triggerInstant = getTriggerInstant(clock);
         long triggerDelayMillis = Duration.between(currentInstant, triggerInstant).toMillis();
         Runnable task = createTask(rotatable, triggerInstant);
-        config.getExecutorService().schedule(task, triggerDelayMillis, TimeUnit.MILLISECONDS);
+        this.scheduledFuture = config
+                .getExecutorService()
+                .schedule(task, triggerDelayMillis, TimeUnit.MILLISECONDS);
     }
 
     private Runnable createTask(Rotatable rotatable, Instant triggerInstant) {
@@ -54,6 +59,13 @@ public abstract class TimeBasedRotationPolicy implements RotationPolicy {
             rotatable.rotate(TimeBasedRotationPolicy.this, triggerInstant);
             start(rotatable);
         };
+    }
+
+    @Override
+    public synchronized void stop() {
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+        }
     }
 
     abstract public Instant getTriggerInstant(Clock clock);

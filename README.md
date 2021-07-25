@@ -132,6 +132,7 @@ methods.
 - [Christoph (pitschr) Pitschmann](https://github.com/pitschr) (Windows-specific
   fixes, `RotationCallback#onOpen()` method, Java 9 module name, scheduler
   shutdown at exit)
+- [David (kc7bfi) Robison](https://github.com/kc7bfi) (NPE due to write after close in #26)
 - [Jonas (yawkat) Konrad](https://yawk.at/) (`RotatingFileOutputStream`
   thread-safety improvements)
 - [Lukas Bradley](https://github.com/lukasbradley/)

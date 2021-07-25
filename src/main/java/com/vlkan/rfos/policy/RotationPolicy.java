@@ -22,6 +22,8 @@ public interface RotationPolicy {
 
     void start(Rotatable rotatable);
 
+    default void stop() {}
+
     boolean isWriteSensitive();
 
     void acceptWrite(long byteCount);

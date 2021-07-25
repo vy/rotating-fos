@@ -32,12 +32,15 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private final RotationConfig config;
 
+    private final List<RotationCallback> callbacks;
+
     private final List<RotationPolicy> writeSensitivePolicies;
 
     private volatile ByteCountingOutputStream stream;
 
     public RotatingFileOutputStream(RotationConfig config) {
         this.config = Objects.requireNonNull(config, "config");
+        this.callbacks = new ArrayList<>(config.getCallbacks());
         this.writeSensitivePolicies = collectWriteSensitivePolicies(config.getPolicies());
         this.stream = open(null, config.getClock().now());
         startPolicies();
@@ -246,12 +249,19 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
             return;
         }
         invokeCallbacks(callback -> callback.onClose(null, config.getClock().now(), stream));
+        stopPolicies();
         stream.close();
         stream = null;
     }
 
+    private void stopPolicies() {
+        config.getPolicies().forEach(RotationPolicy::stop);
+    }
+
     private void invokeCallbacks(Consumer<RotationCallback> invoker) {
-        for (RotationCallback callback : config.getCallbacks()) {
+        // noinspection ForLoopReplaceableByForEach (avoid iterator instantion)
+        for (int callbackIndex = 0; callbackIndex < callbacks.size(); callbackIndex++) {
+            RotationCallback callback = callbacks.get(callbackIndex);
             invoker.accept(callback);
         }
     }

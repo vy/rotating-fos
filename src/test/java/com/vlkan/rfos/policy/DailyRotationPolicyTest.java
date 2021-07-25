@@ -31,6 +31,7 @@ import java.io.File;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 class DailyRotationPolicyTest {
@@ -41,25 +42,26 @@ class DailyRotationPolicyTest {
     void test() {
 
         // Create the scheduler mock.
+        ScheduledFuture<?> scheduledFuture = Mockito.mock(ScheduledFuture.class);
         ScheduledExecutorService executorService = Mockito.mock(ScheduledExecutorService.class);
         Mockito
                 .when(executorService.schedule(
                         Mockito.any(Runnable.class),
                         Mockito.anyLong(),
                         Mockito.same(TimeUnit.MILLISECONDS)))
-                .thenAnswer(new Answer<Object>() {
+                .thenAnswer(new Answer<ScheduledFuture<?>>() {
 
                     private int invocationCount = 0;
 
                     @Override
-                    public Object answer(InvocationOnMock invocation) {
+                    public ScheduledFuture<?> answer(InvocationOnMock invocation) {
                         Runnable runnable = invocation.getArgument(0);
                         if (++invocationCount < 3) {
                             runnable.run();
                         } else {
                             LOGGER.trace("skipping execution {invocationCount={}}", invocationCount);
                         }
-                        return null;
+                        return scheduledFuture;
                     }
 
                 });
@@ -126,6 +128,14 @@ class DailyRotationPolicyTest {
         Mockito
                 .verify(rotatable)
                 .rotate(Mockito.same(policy), Mockito.eq(midnight2));
+
+        // Close the policy.
+        policy.stop();
+
+        // Verify the task cancellation.
+        Mockito
+                .verify(scheduledFuture)
+                .cancel(Mockito.same(true));
 
     }
 

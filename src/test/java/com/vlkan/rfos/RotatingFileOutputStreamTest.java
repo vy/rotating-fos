@@ -16,13 +16,16 @@
 
 package com.vlkan.rfos;
 
+import com.vlkan.rfos.policy.DailyRotationPolicy;
 import com.vlkan.rfos.policy.RotationPolicy;
 import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
+import com.vlkan.rfos.policy.WeeklyRotationPolicy;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,8 +36,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -168,9 +176,9 @@ class RotatingFileOutputStreamTest {
 
     private static int findCompressedLength(byte[] inputBytes) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-             try (GZIPOutputStream gzippedOutputStream = new GZIPOutputStream(outputStream)) {
-                 gzippedOutputStream.write(inputBytes);
-             }
+            try (GZIPOutputStream gzippedOutputStream = new GZIPOutputStream(outputStream)) {
+                gzippedOutputStream.write(inputBytes);
+            }
             return outputStream.toByteArray().length;
         } catch (IOException error) {
             throw new RuntimeException("compress failure", error);
@@ -559,6 +567,64 @@ class RotatingFileOutputStreamTest {
                         Mockito.any(),
                         Mockito.any(),
                         Mockito.any());
+
+    }
+
+    @Test
+    void test_time_based_policies_are_stopped_after_close() throws Exception {
+
+        // Determine file names.
+        String className = RotatingFileOutputStream.class.getSimpleName();
+        File file = new File(tmpDir, className + ".log");
+        String fileName = file.getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
+
+        // Create the scheduler mock.
+        ScheduledFuture<?> scheduledFuture = Mockito.mock(ScheduledFuture.class);
+        ScheduledExecutorService executorService = Mockito.mock(ScheduledExecutorService.class);
+        Mockito
+                .when(executorService.schedule(
+                        Mockito.any(Runnable.class),
+                        Mockito.anyLong(),
+                        Mockito.same(TimeUnit.MILLISECONDS)))
+                .thenAnswer((Answer<ScheduledFuture<?>>) invocationOnMock -> scheduledFuture);
+
+        // Create the stream config.
+        LinkedHashSet<RotationPolicy> policies =
+                new LinkedHashSet<>(
+                        Arrays.asList(
+                                WeeklyRotationPolicy.getInstance(),
+                                DailyRotationPolicy.getInstance()));
+        RotationConfig config = RotationConfig
+                .builder()
+                .file(fileName)
+                .filePattern(fileNamePattern)
+                .policies(policies)
+                .executorService(executorService)
+                .build();
+
+        // Create the stream, write some, and close it.
+        RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
+        stream.write("payload".getBytes(StandardCharsets.UTF_8));
+        stream.close();
+
+        // Verify the task scheduling.
+        InOrder inOrder = Mockito.inOrder(scheduledFuture, executorService);
+        inOrder
+                .verify(executorService, Mockito.times(2))
+                .schedule(
+                        Mockito.any(Runnable.class),
+                        Mockito.anyLong(),
+                        Mockito.same(TimeUnit.MILLISECONDS));
+
+        // Verify the task cancellation.
+        inOrder
+                .verify(scheduledFuture, Mockito.times(2))
+                .cancel(Mockito.eq(true));
+
+        // Verify no more interactions.
+        Mockito.verifyNoMoreInteractions(scheduledFuture);
+        Mockito.verifyNoMoreInteractions(executorService);
 
     }
 
