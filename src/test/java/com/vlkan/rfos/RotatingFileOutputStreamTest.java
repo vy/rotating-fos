@@ -37,6 +37,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -521,6 +522,114 @@ class RotatingFileOutputStreamTest {
             targetIndex += source.length;
         }
         return target;
+    }
+
+    @Test
+    void test_filePattern_and_maxBackupCount_conflict() {
+
+        // Prepare the builder.
+        File file = new File(tmpDir, "filePattern_and_maxBackupCount_combination.log");
+        RotationConfig.Builder builder = RotationConfig
+                .builder()
+                .file(file)
+                .executorService(executorService)
+                .policy(DailyRotationPolicy.getInstance());
+
+        // Verify the absence of both.
+        verifyFilePatternAndMaxBackupCountConflict(builder::build);
+
+        // Verify the conflict.
+        verifyFilePatternAndMaxBackupCountConflict(() -> builder
+                .filePattern("filePattern_and_maxBackupCount_combination-%d{HHmmss}.log")
+                .maxBackupCount(10)
+                .build());
+
+    }
+
+    private static void verifyFilePatternAndMaxBackupCountConflict(Runnable runnable) {
+        Assertions
+                .assertThatThrownBy(runnable::run)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("one of either maxBackupCount or filePattern must be provided");
+    }
+
+    @Test
+    void test_maxBackupCount() throws Exception {
+
+        // Create the policy and the callback.
+        RotationPolicy policy = Mockito.mock(RotationPolicy.class);
+        Mockito.when(policy.isWriteSensitive()).thenReturn(false);
+        RotationCallback callback = Mockito.mock(RotationCallback.class);
+
+        // Create the stream.
+        File file = new File(tmpDir, "maxBackupCount.log");
+        RotationConfig config = RotationConfig
+                .builder()
+                .executorService(executorService)
+                .file(file)
+                .maxBackupCount(2)
+                .policy(policy)
+                .callbacks(Collections.singleton(callback))
+                .build();
+        RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
+
+        // Determine the backup files.
+        File backupFile0 = new File(tmpDir, "maxBackupCount.log.0");
+        File backupFile1 = new File(tmpDir, "maxBackupCount.log.1");
+        File backupFile2 = new File(tmpDir, "maxBackupCount.log.2");
+
+        // Write some and trigger rotation.
+        byte[] content1 = "1st".getBytes(StandardCharsets.UTF_8);
+        stream.write(content1);
+        Instant instant1 = Instant.parse("2021-07-26T21:16:12.345Z");
+        stream.rotate(policy, instant1);
+
+        // Verify the backup #1.
+        Assertions.assertThat(backupFile0).hasBinaryContent(content1);
+        Assertions.assertThat(backupFile1).doesNotExist();
+        Assertions.assertThat(backupFile2).doesNotExist();
+        InOrder inOrder = Mockito.inOrder(callback);
+        inOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.same(instant1),
+                        Mockito.eq(backupFile0));
+
+        // Write some and trigger rotation.
+        byte[] content2 = "2nd".getBytes(StandardCharsets.UTF_8);
+        stream.write(content2);
+        Instant instant2 = instant1.plus(Duration.ofHours(1));
+        stream.rotate(policy, instant2);
+
+        // Verify the backup #2.
+        Assertions.assertThat(backupFile0).hasBinaryContent(content2);
+        Assertions.assertThat(backupFile1).hasBinaryContent(content1);
+        Assertions.assertThat(backupFile2).doesNotExist();
+        inOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.same(instant2),
+                        Mockito.eq(backupFile0));
+
+        // Write some and trigger rotation.
+        byte[] content3 = "3rd".getBytes(StandardCharsets.UTF_8);
+        stream.write(content3);
+        Instant instant3 = instant2.plus(Duration.ofHours(1));
+        stream.rotate(policy, instant3);
+
+        // Verify the backup #3.
+        Assertions.assertThat(backupFile0).hasBinaryContent(content3);
+        Assertions.assertThat(backupFile1).hasBinaryContent(content2);
+        Assertions.assertThat(backupFile2).doesNotExist();
+        inOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.same(instant3),
+                        Mockito.eq(backupFile0));
+
     }
 
     @Test

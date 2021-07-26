@@ -40,6 +40,26 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 }
 ```
 
+Using `maxBackupCount`, one can also introduce a rolling scheme where the
+`filePattern` will be implicitly set to `file.%i` where `%i` denotes the
+auto-generated rolling index. There maximum `maxBackupCount` of such files will
+be preserved and the older ones will be automatically deleted:
+
+```java
+RotationConfig config = RotationConfig
+        .builder()
+        .file("/tmp/app.log")
+        .maxBackupCount(10)         // Set `filePattern` to `file.%i` and keep
+                                    // the most recent 10 files.
+        .policy(new SizeBasedRotationPolicy(1024 * 1024 * 100 /* 100MiB */))
+        .compress(true)             // Compress rotated files.
+        .build();
+
+try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
+    stream.write("Hello, world!".getBytes(StandardCharsets.UTF_8));
+}
+```
+
 `RotationConfig.Builder` supports the following methods:
 
 | Method(s) | Description |
@@ -47,11 +67,16 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 | `file(File)`<br/>`file(String)` | file accessed (e.g., `/tmp/app.log`) |
 | `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| rotating file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
 | `policy(RotationPolicy)`<br/>`policies(Set<RotationPolicy> policies)` | rotation policies |
+| `maxBackupCount(int)` | if greater than zero, `filePattern` will be implicitly set to `file.%i` where `%i` denotes the auto-generated rolling index, maximum `maxBackupCount` of such files will be preserved and the older ones will be deleted (defaults to `-1`, that is, no rolling) |
 | `executorService(ScheduledExecutorService)` | scheduler for time-based policies and compression tasks |
 | `append(boolean)` | append while opening the `file` (defaults to `true`) |
 | `compress(boolean)` | GZIP compression after rotation (defaults to `false`) |
 | `clock(Clock)` | clock for retrieving date and time (defaults to `SystemClock`) |
 | `callback(RotationCallback)`<br/>`callbacks(Set<RotationCallback>)` | rotation callbacks (defaults to `LoggingRotationCallback`) |
+
+Note that `maxBackupCount` takes control of the rotated file names, that is,
+`file.%i` where `%i` denotes the auto-generated rolling index. Hence, one of
+either `filePattern` or `maxBackupCount` must be provided, not both.
 
 The default `ScheduledExecutorService` can be retrieved via
 `RotationConfig#getDefaultExecutorService()`, which is a
@@ -136,6 +161,7 @@ methods.
 - [Jonas (yawkat) Konrad](https://yawk.at/) (`RotatingFileOutputStream`
   thread-safety improvements)
 - [Lukas Bradley](https://github.com/lukasbradley/)
+- [Liran Mendelovich](https://github.com/liran2000/) (rolling via `maxBackupCount`)
 
 # License
 

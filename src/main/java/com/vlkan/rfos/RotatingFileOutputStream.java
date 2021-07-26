@@ -16,15 +16,25 @@
 
 package com.vlkan.rfos;
 
-import com.vlkan.rfos.policy.RotationPolicy;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.zip.GZIPOutputStream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.time.Instant;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.zip.GZIPOutputStream;
+import com.vlkan.rfos.policy.RotationPolicy;
 
 public class RotatingFileOutputStream extends OutputStream implements Rotatable {
 
@@ -106,10 +116,22 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         invokeCallbacks(callback -> callback.onClose(policy, instant, stream));
         stream.close();
 
-        // Rename the file.
-        File rotatedFile = config.getFilePattern().create(instant).getAbsoluteFile();
-        LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
-        boolean renamed = config.getFile().renameTo(rotatedFile);
+        // Rename backups, if enabled.
+        File rotatedFile;
+        boolean renamed;
+        if (config.getMaxBackupCount() > 0) {
+            File[] rotatedFileRef = {null};
+            renamed = renameBackups() && backupFile(rotatedFileRef);
+            rotatedFile = rotatedFileRef[0];
+        }
+
+        // Otherwise, rename using the provided file pattern.
+        else {
+        	rotatedFile = config.getFilePattern().create(instant).getAbsoluteFile();
+            LOGGER.debug("renaming {file={}, rotatedFile={}}", config.getFile(), rotatedFile);
+            renamed = config.getFile().renameTo(rotatedFile);
+        }
+
         if (!renamed) {
             String message = String.format("rename failure {file=%s, rotatedFile=%s}", config.getFile(), rotatedFile);
             IOException error = new IOException(message);
@@ -130,6 +152,40 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         // So far, so good;
         invokeCallbacks(callback -> callback.onSuccess(policy, instant, rotatedFile));
 
+    }
+
+    private boolean renameBackups() {
+        File newFile = getBackupFile(config.getMaxBackupCount() - 1);
+        for (int backupIndex = config.getMaxBackupCount() - 2; backupIndex >= 0; backupIndex--) {
+            File oldFile = getBackupFile(backupIndex);
+            if (!oldFile.exists()) {
+                continue;
+            }
+            LOGGER.debug("renaming backup {} to {}", oldFile, newFile);
+            boolean renamed = oldFile.renameTo(newFile);
+            if (!renamed) {
+                LOGGER.error("failed renaming backup {} to {}", oldFile, newFile);
+                return false;
+            }
+            newFile = oldFile;
+        }
+        return true;
+    }
+
+    private boolean backupFile(File[] backupFileRef) {
+        File newFile = backupFileRef[0] = getBackupFile(0);
+        File oldFile = config.getFile();
+        LOGGER.debug("renaming {} to {} for backup", oldFile, newFile);
+        return oldFile.renameTo(newFile);
+    }
+
+    private File getBackupFile(int backupIndex) {
+        String parent = config.getFile().getParent();
+        if (parent == null) {
+            parent = ".";
+        }
+        String fileName = config.getFile().getName() + '.' + backupIndex;
+        return Paths.get(parent, fileName).toFile();
     }
 
     private void asyncCompress(RotationPolicy policy, Instant instant, File rotatedFile) {
