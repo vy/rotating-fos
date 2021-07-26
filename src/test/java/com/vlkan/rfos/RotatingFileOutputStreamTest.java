@@ -21,6 +21,8 @@ import com.vlkan.rfos.policy.RotationPolicy;
 import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
 import com.vlkan.rfos.policy.WeeklyRotationPolicy;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InOrder;
@@ -42,17 +44,28 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPOutputStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class RotatingFileOutputStreamTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RotatingFileOutputStreamTest.class);
 
     @TempDir
-    public File tmpDir;
+    File tmpDir;
+
+    private ScheduledExecutorService executorService;
+
+    @BeforeEach
+    void setupExecutorService() {
+        executorService = new ScheduledThreadPoolExecutor(2);
+    }
+
+    @AfterEach
+    void stopExecutorService() {
+        executorService.shutdownNow();
+    }
 
     @Test
     void test_write_insensitive_policy() throws Exception {
@@ -67,10 +80,10 @@ class RotatingFileOutputStreamTest {
     private void test_write_insensitive_policy(boolean compress) throws Exception {
 
         // Determine file names.
-        String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(tmpDir, className + ".log");
+        String fileNamePrefix = "writeInsensitivePolicy-compress-" + String.valueOf(compress).toLowerCase();
+        File file = new File(tmpDir, fileNamePrefix + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, fileNamePrefix + "-%d{yyyy}.log").getAbsolutePath();
         String rotatedFileNameSuffix = compress ? ".gz" : "";
         Instant now = Instant.now();
         File rotatedFile = new File(
@@ -88,11 +101,12 @@ class RotatingFileOutputStreamTest {
         RotationCallback callback = Mockito.spy(LoggingRotationCallback.getInstance());
         RotationConfig config = RotationConfig
                 .builder()
+                .executorService(executorService)
                 .compress(compress)
                 .file(fileName)
                 .filePattern(fileNamePattern)
                 .policy(policy)
-                .callback(callback)
+                .callbacks(Collections.singleton(callback))
                 .build();
         InOrder inOrder = Mockito.inOrder(callback, policy);
         RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
@@ -155,18 +169,19 @@ class RotatingFileOutputStreamTest {
         int expectedRotatedFileLength = compress
                 ? findCompressedLength(payload)
                 : payload.length;
-        assertThat(rotatedFileLength).isEqualTo(expectedRotatedFileLength);
-        assertThat(file.length()).isEqualTo(0);
+        Assertions.assertThat(rotatedFileLength).isEqualTo(expectedRotatedFileLength);
+        Assertions.assertThat(file.length()).isEqualTo(0);
 
-        // Verify the stream close. (We cannot use InOrder here since we don't
-        // know whether the rotation background task or the user-invoked close()
-        // will finish earlier.)
+        // Verify the stream close and the policy shutdown. (We cannot use
+        // InOrder here since we don't know whether the rotation background task
+        // due to compression or the user-invoked close() will finish earlier.)
         Mockito
                 .verify(callback)
                 .onClose(
                         Mockito.isNull(),
                         Mockito.any(Instant.class),
                         Mockito.any(OutputStream.class));
+        Mockito.verify(policy).stop();
 
         // Verify no more interactions.
         Mockito.verifyNoMoreInteractions(callback);
@@ -189,10 +204,10 @@ class RotatingFileOutputStreamTest {
     void test_write_sensitive_policy() throws Exception {
 
         // Determine file names.
-        String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(tmpDir, className + ".log");
+        String fileNamePrefix = "writeSensitivePolicy";
+        File file = new File(tmpDir, fileNamePrefix + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, fileNamePrefix + "-%d{yyyy}.log").getAbsolutePath();
         File rotatedFile = new File(fileNamePattern.replace("%d{yyyy}", String.valueOf(Calendar.getInstance().get(Calendar.YEAR))));
 
         // Create the stream.
@@ -202,10 +217,11 @@ class RotatingFileOutputStreamTest {
         InOrder callbackInOrder = Mockito.inOrder(callback);
         RotationConfig config = RotationConfig
                 .builder()
+                .executorService(executorService)
                 .file(fileName)
                 .filePattern(fileNamePattern)
                 .policy(policy)
-                .callback(callback)
+                .callbacks(Collections.singleton(callback))
                 .build();
         RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
 
@@ -224,7 +240,7 @@ class RotatingFileOutputStreamTest {
         for (int byteIndex = 0; byteIndex < maxByteCount; byteIndex++) {
             stream.write(byteIndex);
         }
-        assertThat(file.length()).isEqualTo(maxByteCount);
+        Assertions.assertThat(file.length()).isEqualTo(maxByteCount);
 
         // Verify no rotations so far.
         Mockito.verifyNoMoreInteractions(callback);
@@ -262,8 +278,8 @@ class RotatingFileOutputStreamTest {
                         Mockito.same(policy),
                         Mockito.any(Instant.class),
                         Mockito.eq(rotatedFile));
-        assertThat(rotatedFile.length()).isEqualTo(maxByteCount);
-        assertThat(file.length()).isEqualTo(1);
+        Assertions.assertThat(rotatedFile.length()).isEqualTo(maxByteCount);
+        Assertions.assertThat(file.length()).isEqualTo(1);
 
         // Verify no more callback interactions.
         Mockito.verifyNoMoreInteractions(callback);
@@ -286,10 +302,11 @@ class RotatingFileOutputStreamTest {
         InOrder callbackInOrder = Mockito.inOrder(callback);
         RotationConfig config = RotationConfig
                 .builder()
+                .executorService(executorService)
                 .file(fileName)
                 .filePattern(fileNamePattern)
                 .policy(policy)
-                .callback(callback)
+                .callbacks(Collections.singleton(callback))
                 .build();
         RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
 
@@ -310,7 +327,7 @@ class RotatingFileOutputStreamTest {
         }
         stream.write(payload);
         stream.flush();
-        assertThat(file.length()).isEqualTo(payload.length);
+        Assertions.assertThat(file.length()).isEqualTo(payload.length);
 
         // Verify the rotation trigger.
         callbackInOrder
@@ -339,10 +356,11 @@ class RotatingFileOutputStreamTest {
         InOrder callbackInOrder = Mockito.inOrder(callback);
         RotationConfig config = RotationConfig
                 .builder()
+                .executorService(executorService)
                 .file(fileName)
                 .filePattern(fileNamePattern)
                 .policy(policy)
-                .callback(callback)
+                .callbacks(Collections.singleton(callback))
                 .build();
 
         // Create the header injectors.
@@ -503,16 +521,19 @@ class RotatingFileOutputStreamTest {
     void test_rotation_and_write_failure_after_close() throws Exception {
 
         // Determine file names.
-        String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(tmpDir, className + ".log");
+        String fileNamePrefix = "rotationAndWriteFailureAfterClose";
+        File file = new File(tmpDir, fileNamePrefix + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, fileNamePrefix + "-%d{HHmmss-SSS}.log").getAbsolutePath();
 
         // Create the stream config.
         RotationPolicy policy = Mockito.mock(RotationPolicy.class);
+        Mockito.when(policy.toString()).thenReturn("MockedPolicy");
         RotationCallback callback = Mockito.mock(RotationCallback.class);
+        Mockito.when(callback.toString()).thenReturn("MockedCallback");
         RotationConfig config = RotationConfig
                 .builder()
+                .executorService(executorService)
                 .file(fileName)
                 .filePattern(fileNamePattern)
                 .policy(policy)
@@ -574,13 +595,14 @@ class RotatingFileOutputStreamTest {
     void test_time_based_policies_are_stopped_after_close() throws Exception {
 
         // Determine file names.
-        String className = RotatingFileOutputStream.class.getSimpleName();
-        File file = new File(tmpDir, className + ".log");
+        String fileNamePrefix = "timeBasedPoliciesAfterClose";
+        File file = new File(tmpDir, fileNamePrefix + ".log");
         String fileName = file.getAbsolutePath();
-        String fileNamePattern = new File(tmpDir, className + "-%d{yyyy}.log").getAbsolutePath();
+        String fileNamePattern = new File(tmpDir, fileNamePrefix + "-%d{HHmmss-SSS}.log").getAbsolutePath();
 
         // Create the scheduler mock.
         ScheduledFuture<?> scheduledFuture = Mockito.mock(ScheduledFuture.class);
+        Mockito.when(scheduledFuture.toString()).thenReturn("MockedScheduledFuture");
         ScheduledExecutorService executorService = Mockito.mock(ScheduledExecutorService.class);
         Mockito
                 .when(executorService.schedule(
@@ -588,6 +610,7 @@ class RotatingFileOutputStreamTest {
                         Mockito.anyLong(),
                         Mockito.same(TimeUnit.MILLISECONDS)))
                 .thenAnswer((Answer<ScheduledFuture<?>>) invocationOnMock -> scheduledFuture);
+        Mockito.when(executorService.toString()).thenReturn("MockedScheduledExecutorService");
 
         // Create the stream config.
         LinkedHashSet<RotationPolicy> policies =
@@ -597,6 +620,7 @@ class RotatingFileOutputStreamTest {
                                 DailyRotationPolicy.getInstance()));
         RotationConfig config = RotationConfig
                 .builder()
+                .executorService(executorService)
                 .file(fileName)
                 .filePattern(fileNamePattern)
                 .policies(policies)
