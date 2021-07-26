@@ -53,4 +53,4 @@ jobs:
         timeout-minutes: 1
         # pwsh (the default shell on Windows) hijacks "exec" keyword
         shell: bash
-        run: ./mvnw exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.vlkan.rfos.SchedulerShutdownTestApp
+        run: ./mvnw -V -B --no-transfer-progress -e "-DtrimStackTrace=false" exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.vlkan.rfos.SchedulerShutdownTestApp

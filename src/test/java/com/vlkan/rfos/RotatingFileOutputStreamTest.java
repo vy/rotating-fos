@@ -284,6 +284,9 @@ class RotatingFileOutputStreamTest {
         // Verify no more callback interactions.
         Mockito.verifyNoMoreInteractions(callback);
 
+        // Close the stream to avoid Windows failing to clean the temporary directory.
+        stream.close();
+
     }
 
     @Test
@@ -336,6 +339,9 @@ class RotatingFileOutputStreamTest {
 
         // Verify the rotation skip.
         Mockito.verifyNoMoreInteractions(callback);
+
+        // Close the stream to avoid Windows failing to clean the temporary directory.
+        stream.close();
 
     }
 
