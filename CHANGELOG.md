@@ -1,5 +1,8 @@
 ### (2021-07-29) v0.9.3
 
+- Switched from `File#renameTo(File)` to the more robust
+  `Files.move(Path, Path, CopyOptions...)` alternative. (#14)
+
 - Add rolling support via `maxBackupCount`. (#14)
 
 - Stop policies after stream close. (#26)
