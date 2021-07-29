@@ -1,3 +1,9 @@
+### (2021-07-29) v0.9.3
+
+- Add rolling support via `maxBackupCount`. (#14)
+
+- Stop policies after stream close. (#26)
+
 ### (2020-01-10) v0.9.2
 
 - Shutdown the default `ScheduledExecutorService` at JVM exit. (#12)
