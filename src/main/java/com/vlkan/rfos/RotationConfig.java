@@ -20,7 +20,6 @@ import com.vlkan.rfos.policy.RotationPolicy;
 
 import java.io.File;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -29,6 +28,17 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 
 public class RotationConfig {
+
+    private static final boolean DEFAULT_APPEND = true;
+
+    private static final boolean DEFAULT_COMPRESS = false;
+
+    private static final Clock DEFAULT_CLOCK = SystemClock.getInstance();
+
+    private static final Set<RotationCallback> DEFAULT_CALLBACKS =
+            Collections.singleton(LoggingRotationCallback.getInstance());
+
+    private static final int DEFAULT_MAX_BACKUP_COUNT = -1;
 
     private enum DefaultExecutorServiceHolder {;
 
@@ -74,6 +84,8 @@ public class RotationConfig {
 
     private final boolean compress;
 
+    private final int maxBackupCount;
+
     private final Clock clock;
 
     private final Set<RotationCallback> callbacks;
@@ -85,6 +97,7 @@ public class RotationConfig {
         this.policies = Collections.unmodifiableSet(builder.policies);
         this.append = builder.append;
         this.compress = builder.compress;
+        this.maxBackupCount = builder.maxBackupCount;
         this.clock = builder.clock;
         this.callbacks = Collections.unmodifiableSet(builder.callbacks);
     }
@@ -109,16 +122,40 @@ public class RotationConfig {
         return policies;
     }
 
+    public static boolean getDefaultAppend() {
+        return DEFAULT_APPEND;
+    }
+
     public boolean isAppend() {
         return append;
+    }
+
+    public static boolean getDefaultCompress() {
+        return DEFAULT_COMPRESS;
     }
 
     public boolean isCompress() {
         return compress;
     }
 
-    public Clock getClock() {
+    public static int getDefaultMaxBackupCount() {
+        return DEFAULT_MAX_BACKUP_COUNT;
+    }
+
+    public int getMaxBackupCount() {
+		return maxBackupCount;
+	}
+
+	public static Clock getDefaultClock() {
+        return DEFAULT_CLOCK;
+    }
+
+	public Clock getClock() {
         return clock;
+    }
+
+    public static Set<RotationCallback> getDefaultCallbacks() {
+        return DEFAULT_CALLBACKS;
     }
 
     /**
@@ -142,6 +179,7 @@ public class RotationConfig {
         RotationConfig that = (RotationConfig) instance;
         return append == that.append &&
                 compress == that.compress &&
+				maxBackupCount == that.maxBackupCount &&
                 Objects.equals(file, that.file) &&
                 Objects.equals(filePattern, that.filePattern) &&
                 Objects.equals(executorService, that.executorService) &&
@@ -152,12 +190,26 @@ public class RotationConfig {
 
     @Override
     public int hashCode() {
-        return Objects.hash(file, filePattern, executorService, policies, append, compress, clock, callbacks);
+        return Objects.hash(
+                file,
+                filePattern,
+                executorService,
+                policies,
+                append,
+                compress,
+                maxBackupCount,
+                clock,
+                callbacks);
     }
 
     @Override
     public String toString() {
         return String.format("RotationConfig{file=%s}", file);
+    }
+
+    public static Builder builder(RotationConfig config) {
+        Objects.requireNonNull(config, "config");
+        return new Builder(config);
     }
 
     public static Builder builder() {
@@ -174,51 +226,67 @@ public class RotationConfig {
 
         private Set<RotationPolicy> policies;
 
-        private boolean append = true;
+        private boolean append = DEFAULT_APPEND;
 
-        private boolean compress = false;
+        private boolean compress = DEFAULT_COMPRESS;
 
-        private Clock clock = SystemClock.getInstance();
+        private int maxBackupCount = DEFAULT_MAX_BACKUP_COUNT;
 
-        private Set<RotationCallback> callbacks =
-                new HashSet<>(Collections.singleton(
-                        LoggingRotationCallback.getInstance()));
+        private Clock clock = DEFAULT_CLOCK;
 
-        private Builder() {
-            // Do nothing.
+        private Set<RotationCallback> callbacks = new LinkedHashSet<>(DEFAULT_CALLBACKS);
+
+        private Builder(RotationConfig config) {
+            this.file = config.file;
+            this.filePattern = config.filePattern;
+            this.executorService = config.executorService;
+            this.policies = config.policies;
+            this.append = config.append;
+            this.compress = config.append;
+            this.maxBackupCount = config.maxBackupCount;
+            this.clock = config.clock;
+            this.callbacks = config.callbacks;
         }
 
+        private Builder() {}
+
         public Builder file(File file) {
-            this.file = file;
+            this.file = Objects.requireNonNull(file, "file");
             return this;
         }
 
         public Builder file(String fileName) {
+            Objects.requireNonNull(fileName, "fileName");
             this.file = new File(fileName);
             return this;
         }
 
         public Builder filePattern(RotatingFilePattern filePattern) {
-            this.filePattern = filePattern;
+            this.filePattern = Objects.requireNonNull(filePattern, "filePattern");
             return this;
         }
 
         public Builder filePattern(String filePattern) {
-            this.filePattern = RotatingFilePattern.builder().pattern(filePattern).build();
+            Objects.requireNonNull(filePattern, "filePattern");
+            this.filePattern = RotatingFilePattern
+                    .builder()
+                    .pattern(filePattern)
+                    .build();
             return this;
         }
 
         public Builder executorService(ScheduledExecutorService executorService) {
-            this.executorService = executorService;
+            this.executorService = Objects.requireNonNull(executorService, "executorService");
             return this;
         }
 
         public Builder policies(Set<RotationPolicy> policies) {
-            this.policies = policies;
+            this.policies = Objects.requireNonNull(policies, "policies");
             return this;
         }
 
         public Builder policy(RotationPolicy policy) {
+            Objects.requireNonNull(policy, "policy");
             if (policies == null) {
                 policies = new LinkedHashSet<>();
             }
@@ -236,8 +304,13 @@ public class RotationConfig {
             return this;
         }
 
+        public Builder maxBackupCount(int maxBackupCount) {
+            this.maxBackupCount = maxBackupCount;
+            return this;
+        }
+
         public Builder clock(Clock clock) {
-            this.clock = clock;
+            this.clock = Objects.requireNonNull(clock, "clock");
             return this;
         }
 
@@ -248,7 +321,7 @@ public class RotationConfig {
         }
 
         public Builder callbacks(Set<RotationCallback> callbacks) {
-            this.callbacks = callbacks;
+            this.callbacks = Objects.requireNonNull(callbacks, "callbacks");
             return this;
         }
 
@@ -266,12 +339,24 @@ public class RotationConfig {
 
         private void validate() {
             Objects.requireNonNull(file, "file");
-            Objects.requireNonNull(filePattern, "filePattern");
-            if (policies == null || policies.isEmpty()) {
-                throw new IllegalArgumentException("empty policies");
+            if (maxBackupCount > 0) {
+                String conflictingField = null;
+                if (filePattern != null) {
+                    conflictingField = "filePattern";
+                } else if (compress) {
+                    conflictingField = "compress";
+                }
+                if (conflictingField != null) {
+                    throw new IllegalArgumentException(
+                            "maxBackupCount and " + conflictingField + " cannot be combined");
+                }
+            } else if (filePattern == null) {
+                throw new IllegalArgumentException(
+                        "one of either maxBackupCount or filePattern must be provided");
             }
-            Objects.requireNonNull(clock, "clock");
-            Objects.requireNonNull(callbacks, "callbacks");
+            if (policies == null || policies.isEmpty()) {
+                throw new IllegalArgumentException("no rotation policy is provided");
+            }
         }
 
     }

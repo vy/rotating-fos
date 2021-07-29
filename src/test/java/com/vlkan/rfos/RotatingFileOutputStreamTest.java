@@ -524,6 +524,151 @@ class RotatingFileOutputStreamTest {
     }
 
     @Test
+    void test_maxBackupCount_arg_conflicts() {
+
+        // Prepare common builder fields.
+        File file = new File(tmpDir, "maxBackupCount_arg_conflicts.log");
+        RotationPolicy policy = Mockito.mock(RotationPolicy.class);
+        Mockito.when(policy.toString()).thenReturn("MockedPolicy");
+
+        // Verify the absence of both maxBackupCount and filePattern.
+        Assertions
+                .assertThatThrownBy(() -> RotationConfig
+                        .builder()
+                        .file(file)
+                        .executorService(executorService)
+                        .policy(policy)
+                        .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("one of either maxBackupCount or filePattern must be provided");
+
+        // Verify the conflict of maxBackupCount and filePattern.
+        Assertions
+                .assertThatThrownBy(() -> RotationConfig
+                        .builder()
+                        .file(file)
+                        .executorService(executorService)
+                        .policy(policy)
+                        .filePattern("filePattern_and_maxBackupCount_combination-%d{HHmmss}.log")
+                        .maxBackupCount(10)
+                        .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("maxBackupCount and filePattern cannot be combined");
+
+        // Verify the conflict of maxBackupCount and compress.
+        Assertions
+                .assertThatThrownBy(() -> RotationConfig
+                        .builder()
+                        .file(file)
+                        .executorService(executorService)
+                        .policy(policy)
+                        .compress(true)
+                        .maxBackupCount(10)
+                        .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("maxBackupCount and compress cannot be combined");
+
+    }
+
+    @Test
+    void test_maxBackupCount() throws Exception {
+
+        // Create the policy and the callback.
+        RotationPolicy policy = new SizeBasedRotationPolicy(1);
+        RotationCallback callback = Mockito.mock(RotationCallback.class);
+
+        // Create the stream.
+        File file = new File(tmpDir, "maxBackupCount.log");
+        RotationConfig config = RotationConfig
+                .builder()
+                .executorService(executorService)
+                .file(file)
+                .maxBackupCount(2)
+                .policy(policy)
+                .callbacks(Collections.singleton(callback))
+                .build();
+        RotatingFileOutputStream stream = new RotatingFileOutputStream(config);
+
+        // Determine the backup files.
+        File backupFile0 = new File(tmpDir, "maxBackupCount.log.0");
+        File backupFile1 = new File(tmpDir, "maxBackupCount.log.1");
+        File backupFile2 = new File(tmpDir, "maxBackupCount.log.2");
+
+        // Write some without triggering rotation.
+        byte[] content1 = {'1'};
+        stream.write(content1);
+        stream.flush();
+
+        // Verify files.
+        Assertions.assertThat(file).hasBinaryContent(content1);
+        Assertions.assertThat(backupFile0).doesNotExist();
+        Assertions.assertThat(backupFile1).doesNotExist();
+        Assertions.assertThat(backupFile2).doesNotExist();
+
+        // Write some and trigger the 1st rotation.
+        byte[] content2 = {'2'};
+        stream.write(content2);
+        stream.flush();
+
+        // Verify the 1st rotation.
+        InOrder inOrder = Mockito.inOrder(callback);
+        inOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.any(),
+                        Mockito.eq(backupFile0));
+
+        // Verify files after the 1st rotation.
+        Assertions.assertThat(file).hasBinaryContent(content2);
+        Assertions.assertThat(backupFile0).hasBinaryContent(content1);
+        Assertions.assertThat(backupFile1).doesNotExist();
+        Assertions.assertThat(backupFile2).doesNotExist();
+
+        // Write some and trigger the 2nd rotation.
+        byte[] content3 = {'3'};
+        stream.write(content3);
+        stream.flush();
+
+        // Verify the 2nd rotation.
+        inOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.any(),
+                        Mockito.eq(backupFile0));
+
+        // Verify files after the 2nd rotation.
+        Assertions.assertThat(file).hasBinaryContent(content3);
+        Assertions.assertThat(backupFile0).hasBinaryContent(content2);
+        Assertions.assertThat(backupFile1).hasBinaryContent(content1);
+        Assertions.assertThat(backupFile2).doesNotExist();
+
+        // Write some and trigger the 3rd rotation.
+        byte[] content4 = {'4'};
+        stream.write(content4);
+        stream.flush();
+
+        // Verify the 3rd rotation.
+        inOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.any(),
+                        Mockito.eq(backupFile0));
+
+        // Verify files after the 3rd rotation.
+        Assertions.assertThat(file).hasBinaryContent(content4);
+        Assertions.assertThat(backupFile0).hasBinaryContent(content3);
+        Assertions.assertThat(backupFile1).hasBinaryContent(content2);
+        Assertions.assertThat(backupFile2).doesNotExist();
+
+        // Close the stream to avoid Windows failing to clean the temporary directory.
+        stream.close();
+
+    }
+
+    @Test
     void test_rotation_and_write_failure_after_close() throws Exception {
 
         // Determine file names.

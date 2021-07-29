@@ -24,6 +24,10 @@ import java.util.*;
 
 public class RotatingFilePattern {
 
+    private static final Locale DEFAULT_LOCALE = Locale.getDefault();
+
+    private static final ZoneId DEFAULT_TIME_ZONE_ID = TimeZone.getDefault().toZoneId();
+
     private static final char ESCAPE_CHAR = '%';
 
     private static final char DATE_TIME_DIRECTIVE_CHAR = 'd';
@@ -190,8 +194,16 @@ public class RotatingFilePattern {
         return pattern;
     }
 
+    public static Locale getDefaultLocale() {
+        return DEFAULT_LOCALE;
+    }
+
     public Locale getLocale() {
         return locale;
+    }
+
+    public static ZoneId getDefaultTimeZoneId() {
+        return DEFAULT_TIME_ZONE_ID;
     }
 
     public ZoneId getTimeZoneId() {
@@ -226,24 +238,24 @@ public class RotatingFilePattern {
 
         private String pattern;
 
-        private Locale locale = Locale.getDefault();
+        private Locale locale = DEFAULT_LOCALE;
 
-        private ZoneId timeZoneId = TimeZone.getDefault().toZoneId();
+        private ZoneId timeZoneId = DEFAULT_TIME_ZONE_ID;
 
         private Builder() {}
 
         public Builder pattern(String pattern) {
-            this.pattern = pattern;
+            this.pattern = Objects.requireNonNull(pattern, "pattern");
             return this;
         }
 
         public Builder locale(Locale locale) {
-            this.locale = locale;
+            this.locale = Objects.requireNonNull(locale, "locale");
             return this;
         }
 
         public Builder timeZoneId(ZoneId timeZoneId) {
-            this.timeZoneId = timeZoneId;
+            this.timeZoneId = Objects.requireNonNull(timeZoneId, "timeZoneId");
             return this;
         }
 
@@ -254,8 +266,6 @@ public class RotatingFilePattern {
 
         private void validate() {
             Objects.requireNonNull(pattern, "file");
-            Objects.requireNonNull(locale, "locale");
-            Objects.requireNonNull(timeZoneId, "timeZoneId");
         }
 
     }
