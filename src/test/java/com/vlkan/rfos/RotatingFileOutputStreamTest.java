@@ -663,6 +663,9 @@ class RotatingFileOutputStreamTest {
         Assertions.assertThat(backupFile1).hasBinaryContent(content2);
         Assertions.assertThat(backupFile2).doesNotExist();
 
+        // Close the stream to avoid Windows failing to clean the temporary directory.
+        stream.close();
+
     }
 
     @Test
