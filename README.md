@@ -32,6 +32,7 @@ RotationConfig config = RotationConfig
         .file("/tmp/app.log")
         .filePattern("/tmp/app-%d{yyyyMMdd-HHmmss.SSS}.log")
         .policy(new SizeBasedRotationPolicy(1024 * 1024 * 100 /* 100MiB */))
+        .compress(true)
         .policy(DailyRotationPolicy.getInstance())
         .build();
 
@@ -40,10 +41,9 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 }
 ```
 
-Using `maxBackupCount`, one can also introduce a rolling scheme where the
-`filePattern` will be implicitly set to `file.%i` where `%i` denotes the
-auto-generated rolling index. There maximum `maxBackupCount` of such files will
-be preserved and the older ones will be automatically deleted:
+Using `maxBackupCount`, one can also introduce a rolling scheme where rotated
+files will be named as `file.0`, `file.1`, `file.2`, ..., `file.N` in the order
+from the newest to the oldest, `N` denoting the `maxBackupCount`:
 
 ```java
 RotationConfig config = RotationConfig
@@ -52,7 +52,6 @@ RotationConfig config = RotationConfig
         .maxBackupCount(10)         // Set `filePattern` to `file.%i` and keep
                                     // the most recent 10 files.
         .policy(new SizeBasedRotationPolicy(1024 * 1024 * 100 /* 100MiB */))
-        .compress(true)             // Compress rotated files.
         .build();
 
 try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
@@ -65,18 +64,14 @@ try (RotatingFileOutputStream stream = new RotatingFileOutputStream(config)) {
 | Method(s) | Description |
 | --------- | ----------- |
 | `file(File)`<br/>`file(String)` | file accessed (e.g., `/tmp/app.log`) |
-| `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| rotating file pattern (e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`) |
+| `filePattern(RotatingFilePattern)`<br/>`filePattern(String)`| The pattern used to generate files for moving after rotation, e.g., `/tmp/app-%d{yyyyMMdd-HHmmss-SSS}.log`. This option cannot be combined with `maxBackupCount`. |
 | `policy(RotationPolicy)`<br/>`policies(Set<RotationPolicy> policies)` | rotation policies |
-| `maxBackupCount(int)` | if greater than zero, `filePattern` will be implicitly set to `file.%i` where `%i` denotes the auto-generated rolling index, maximum `maxBackupCount` of such files will be preserved and the older ones will be deleted (defaults to `-1`, that is, no rolling) |
+| `maxBackupCount(int)` | If greater than zero, rotated files will be named as `file.0`, `file.1`, `file.2`, ..., `file.N` in the order from the newest to the oldest, where `N` denoting the `maxBackupCount`. `maxBackupCount` defaults to `-1`, that is, no rolling. This option cannot be combined with `filePattern` or `compress`. |
 | `executorService(ScheduledExecutorService)` | scheduler for time-based policies and compression tasks |
 | `append(boolean)` | append while opening the `file` (defaults to `true`) |
-| `compress(boolean)` | GZIP compression after rotation (defaults to `false`) |
+| `compress(boolean)` | Toggles GZIP compression after rotation and defaults to `false`. This option cannot be combined with `maxBackupCount`. |
 | `clock(Clock)` | clock for retrieving date and time (defaults to `SystemClock`) |
 | `callback(RotationCallback)`<br/>`callbacks(Set<RotationCallback>)` | rotation callbacks (defaults to `LoggingRotationCallback`) |
-
-Note that `maxBackupCount` takes control of the rotated file names, that is,
-`file.%i` where `%i` denotes the auto-generated rolling index. Hence, one of
-either `filePattern` or `maxBackupCount` must be provided, not both.
 
 The default `ScheduledExecutorService` can be retrieved via
 `RotationConfig#getDefaultExecutorService()`, which is a

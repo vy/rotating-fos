@@ -207,6 +207,11 @@ public class RotationConfig {
         return String.format("RotationConfig{file=%s}", file);
     }
 
+    public static Builder builder(RotationConfig config) {
+        Objects.requireNonNull(config, "config");
+        return new Builder(config);
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -231,9 +236,19 @@ public class RotationConfig {
 
         private Set<RotationCallback> callbacks = new LinkedHashSet<>(DEFAULT_CALLBACKS);
 
-        private Builder() {
-            // Do nothing.
+        private Builder(RotationConfig config) {
+            this.file = config.file;
+            this.filePattern = config.filePattern;
+            this.executorService = config.executorService;
+            this.policies = config.policies;
+            this.append = config.append;
+            this.compress = config.append;
+            this.maxBackupCount = config.maxBackupCount;
+            this.clock = config.clock;
+            this.callbacks = config.callbacks;
         }
+
+        private Builder() {}
 
         public Builder file(File file) {
             this.file = Objects.requireNonNull(file, "file");
@@ -324,8 +339,20 @@ public class RotationConfig {
 
         private void validate() {
             Objects.requireNonNull(file, "file");
-            if ((maxBackupCount <= 0 && filePattern == null) || (maxBackupCount > 0 && filePattern != null)) {
-                throw new IllegalArgumentException("one of either maxBackupCount or filePattern must be provided");
+            if (maxBackupCount > 0) {
+                String conflictingField = null;
+                if (filePattern != null) {
+                    conflictingField = "filePattern";
+                } else if (compress) {
+                    conflictingField = "compress";
+                }
+                if (conflictingField != null) {
+                    throw new IllegalArgumentException(
+                            "maxBackupCount and " + conflictingField + " cannot be combined");
+                }
+            } else if (filePattern == null) {
+                throw new IllegalArgumentException(
+                        "one of either maxBackupCount or filePattern must be provided");
             }
             if (policies == null || policies.isEmpty()) {
                 throw new IllegalArgumentException("no rotation policy is provided");
