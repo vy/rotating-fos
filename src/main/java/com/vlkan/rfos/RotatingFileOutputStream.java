@@ -155,28 +155,28 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     }
 
     private boolean renameBackups() {
-        File newFile = getBackupFile(config.getMaxBackupCount() - 1);
+        File dstFile = getBackupFile(config.getMaxBackupCount() - 1);
         for (int backupIndex = config.getMaxBackupCount() - 2; backupIndex >= 0; backupIndex--) {
-            File oldFile = getBackupFile(backupIndex);
-            if (!oldFile.exists()) {
+            File srcFile = getBackupFile(backupIndex);
+            if (!srcFile.exists()) {
                 continue;
             }
-            LOGGER.debug("renaming backup {} to {}", oldFile, newFile);
-            boolean renamed = oldFile.renameTo(newFile);
+            LOGGER.debug("renaming backup {srcFile={}, dstFile={}}", srcFile, dstFile);
+            boolean renamed = srcFile.renameTo(dstFile);
             if (!renamed) {
-                LOGGER.error("failed renaming backup {} to {}", oldFile, newFile);
+                LOGGER.error("failed renaming backup {srcFile={}, dstFile={}}", srcFile, dstFile);
                 return false;
             }
-            newFile = oldFile;
+            dstFile = srcFile;
         }
         return true;
     }
 
     private boolean backupFile(File[] backupFileRef) {
-        File newFile = backupFileRef[0] = getBackupFile(0);
-        File oldFile = config.getFile();
-        LOGGER.debug("renaming {} to {} for backup", oldFile, newFile);
-        return oldFile.renameTo(newFile);
+        File dstFile = backupFileRef[0] = getBackupFile(0);
+        File srcFile = config.getFile();
+        LOGGER.debug("renaming for backup {srcFile={}, dstFile={}}", srcFile, dstFile);
+        return srcFile.renameTo(dstFile);
     }
 
     private File getBackupFile(int backupIndex) {
