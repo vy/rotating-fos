@@ -16,12 +16,21 @@
 
 package com.vlkan.rfos;
 
+/**
+ * Used by {@link RotatingFilePattern} for communicating failures.
+ *
+ * @deprecated This class will be removed in the next major release and plan
+ * {@link IllegalArgumentException}s will be used instead.
+ */
+@Deprecated
 public class RotatingFilePatternException extends IllegalArgumentException {
 
+    @Deprecated
     public RotatingFilePatternException(String message) {
         super(message);
     }
 
+    @Deprecated
     public RotatingFilePatternException(String message, Throwable cause) {
         super(message, cause);
     }

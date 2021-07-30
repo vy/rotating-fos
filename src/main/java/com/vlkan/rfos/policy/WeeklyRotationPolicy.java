@@ -22,6 +22,9 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 
+/**
+ * Policy for triggering a rotation at Sunday midnight every day.
+ */
 public class WeeklyRotationPolicy extends TimeBasedRotationPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeeklyRotationPolicy.class);
@@ -32,10 +35,16 @@ public class WeeklyRotationPolicy extends TimeBasedRotationPolicy {
         // Do nothing.
     }
 
+    /**
+     * @return an instance of this policy
+     */
     public static WeeklyRotationPolicy getInstance() {
         return INSTANCE;
     }
 
+    /**
+     * @return the instant of the upcoming Sunday midnight
+     */
     @Override
     public Instant getTriggerInstant(Clock clock) {
         return clock.sundayMidnight();

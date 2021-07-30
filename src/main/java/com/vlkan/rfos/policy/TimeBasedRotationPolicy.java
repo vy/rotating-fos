@@ -26,15 +26,29 @@ import java.time.Instant;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Base class for implementing periodically triggered time-based policies.
+ *
+ * @see DailyRotationPolicy
+ * @see WeeklyRotationPolicy
+ */
 public abstract class TimeBasedRotationPolicy implements RotationPolicy {
 
     private volatile ScheduledFuture<?> scheduledFuture;
 
+    /**
+     * @return {@code false}, always
+     */
     @Override
     public boolean isWriteSensitive() {
         return false;
     }
 
+    /**
+     * Throws an exception, always, since this is not a write-sensitive policy.
+     *
+     * @throws UnsupportedOperationException thrown upon every call
+     */
     @Override
     public void acceptWrite(long byteCount) {
         throw new UnsupportedOperationException();
@@ -68,8 +82,16 @@ public abstract class TimeBasedRotationPolicy implements RotationPolicy {
         }
     }
 
+    /**
+     * @param clock a clock implementation
+     *
+     * @return the upcoming rotation trigger instant
+     */
     abstract public Instant getTriggerInstant(Clock clock);
 
+    /**
+     * @return the logger used
+     */
     abstract protected Logger getLogger();
 
 }

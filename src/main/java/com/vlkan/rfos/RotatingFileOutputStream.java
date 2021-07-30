@@ -16,7 +16,10 @@
 
 package com.vlkan.rfos;
 
+import com.vlkan.rfos.policy.DailyRotationPolicy;
 import com.vlkan.rfos.policy.RotationPolicy;
+import com.vlkan.rfos.policy.SizeBasedRotationPolicy;
+import com.vlkan.rfos.policy.WeeklyRotationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +40,23 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * A thread-safe {@link OutputStream} targeting a file where rotation of the
+ * active stream is supported.
+ * <p>
+ * Rotation can be triggered by either manually using
+ * {@link #rotate(RotationPolicy, Instant)} method or indirectly using the
+ * registered {@link RotationPolicy} set.
+ * </p><p>
+ * Interception of state changes are supported by the registered
+ * {@link RotationCallback} set.
+ * </p>
+ *
+ * @see LoggingRotationCallback
+ * @see DailyRotationPolicy
+ * @see WeeklyRotationPolicy
+ * @see SizeBasedRotationPolicy
+ */
 public class RotatingFileOutputStream extends OutputStream implements Rotatable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RotatingFileOutputStream.class);
@@ -49,6 +69,11 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private volatile ByteCountingOutputStream stream;
 
+    /**
+     * Constructs an instance using the given configuration
+     *
+     * @param config a configuration instance
+     */
     public RotatingFileOutputStream(RotationConfig config) {
         this.config = Objects.requireNonNull(config, "config");
         this.callbacks = new ArrayList<>(config.getCallbacks());
@@ -296,6 +321,10 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         }
     }
 
+    /**
+     * Unless the stream is already closed, invokes registered callbacks,
+     * stops registered policies, and closes the active stream.
+     */
     @Override
     public synchronized void close() throws IOException {
         if (stream == null) {

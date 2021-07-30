@@ -24,6 +24,9 @@ import java.io.File;
 import java.io.OutputStream;
 import java.time.Instant;
 
+/**
+ * Callback logging every intercepted operation.
+ */
 public class LoggingRotationCallback implements RotationCallback {
 
     private static final LoggingRotationCallback INSTANCE = new LoggingRotationCallback();

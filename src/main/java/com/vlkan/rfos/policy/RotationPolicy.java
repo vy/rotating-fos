@@ -18,14 +18,38 @@ package com.vlkan.rfos.policy;
 
 import com.vlkan.rfos.Rotatable;
 
+/**
+ * The policy to trigger a file rotation in {@link Rotatable}.
+ */
 public interface RotationPolicy {
 
+    /**
+     * Starts the policy. That is, if it is a time-based policy, it can schedule
+     * the next rotation.
+     *
+     * @param rotatable the rotatable accessing this policy
+     */
     void start(Rotatable rotatable);
 
+    /**
+     * Stops the policy. That is, if it is a time-based policy, it can cancel
+     * the scheduled next rotation task.
+     */
     default void stop() {}
 
+    /**
+     * @return {@code true}, if the policy intercepts write operations via
+     * {@link #acceptWrite(long)} method
+     */
     boolean isWriteSensitive();
 
+    /**
+     * Invoked before every write operation, if {@link #isWriteSensitive()}
+     * returns {@code true}.
+     *
+     * @param byteCount the number of bytes written to the active file so far,
+     *                  including the ones about to be written right now
+     */
     void acceptWrite(long byteCount);
 
 }

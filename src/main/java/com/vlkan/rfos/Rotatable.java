@@ -20,10 +20,27 @@ import com.vlkan.rfos.policy.RotationPolicy;
 
 import java.time.Instant;
 
+/**
+ * Interface for representing a rotatable object to policies.
+ *
+ * @see RotatingFileOutputStream
+ * @see RotationPolicy
+ */
 public interface Rotatable {
 
+    /**
+     * Triggers a rotation originating from the given policy at the given instant.
+     *
+     * @param policy the triggering policy, can be {@code null}
+     * @param instant the trigger instant
+     */
     void rotate(RotationPolicy policy, Instant instant);
 
+    /**
+     * Gets the configuration employed.
+     *
+     * @return the configuration employed
+     */
     RotationConfig getConfig();
 
 }

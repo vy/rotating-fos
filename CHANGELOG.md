@@ -1,4 +1,6 @@
-### (2021-07-29) v0.9.3
+### (2021-07-30) v0.9.3
+
+- Improved Javadocs.
 
 - Switched from `File#renameTo(File)` to the more robust
   `Files.move(Path, Path, CopyOptions...)` alternative. (#14)

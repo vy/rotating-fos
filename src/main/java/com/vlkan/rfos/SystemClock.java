@@ -18,6 +18,9 @@ package com.vlkan.rfos;
 
 import java.time.*;
 
+/**
+ * A {@link Clock} implementation using the system time.
+ */
 public class SystemClock implements Clock {
 
     private static final SystemClock INSTANCE = new SystemClock();

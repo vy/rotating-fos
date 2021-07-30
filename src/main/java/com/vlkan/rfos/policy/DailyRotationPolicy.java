@@ -22,6 +22,9 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 
+/**
+ * Policy for triggering a rotation at midnight every day.
+ */
 public class DailyRotationPolicy extends TimeBasedRotationPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DailyRotationPolicy.class);
@@ -32,10 +35,16 @@ public class DailyRotationPolicy extends TimeBasedRotationPolicy {
         // Do nothing.
     }
 
+    /**
+     * @return an instance of this policy
+     */
     public static DailyRotationPolicy getInstance() {
         return INSTANCE;
     }
 
+    /**
+     * @return the instant of the upcoming midnight
+     */
     @Override
     public Instant getTriggerInstant(Clock clock) {
         return clock.midnight();

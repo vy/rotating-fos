@@ -18,12 +18,30 @@ package com.vlkan.rfos;
 
 import java.time.Instant;
 
+/**
+ * The clock used by {@link RotatingFileOutputStream}.
+ */
 public interface Clock {
 
+    /**
+     * Gets the current instant.
+     *
+     * @return the current instant
+     */
     Instant now();
 
+    /**
+     * Gets the instant of the upcoming midnight.
+     *
+     * @return the instant of the upcoming midnight
+     */
     Instant midnight();
 
+    /**
+     * Gets the instant of the upcoming Sunday midnight.
+     *
+     * @return the instant of the upcoming Sunday midnight.
+     */
     Instant sundayMidnight();
 
 }

@@ -23,6 +23,9 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.util.Objects;
 
+/**
+ * Policy for triggering a rotation when a certain byte count threshold is exceeded.
+ */
 public class SizeBasedRotationPolicy implements RotationPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SizeBasedRotationPolicy.class);
@@ -31,6 +34,11 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
 
     private Rotatable rotatable;
 
+    /**
+     * Constructs an instance using the given threshold.
+     *
+     * @param maxByteCount the maximum byte count threshold triggering a rotation when exceeded
+     */
     public SizeBasedRotationPolicy(long maxByteCount) {
         if (maxByteCount < 1) {
             String message = String.format("invalid size {maxByteCount=%d}", maxByteCount);
@@ -39,15 +47,26 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
         this.maxByteCount = maxByteCount;
     }
 
+    /**
+     * @return the maximum byte count threshold triggering a rotation when exceeded
+     */
     public long getMaxByteCount() {
         return maxByteCount;
     }
 
+    /**
+     * @return {@code true}, always.
+     */
     @Override
     public boolean isWriteSensitive() {
         return true;
     }
 
+    /**
+     * Triggers a rotation if the given byte count exceeds the set threshold.
+     *
+     * @param byteCount the number of bytes written to the active stream so far
+     */
     @Override
     public void acceptWrite(long byteCount) {
         if (byteCount > maxByteCount) {

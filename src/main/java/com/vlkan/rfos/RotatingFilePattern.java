@@ -22,6 +22,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+/**
+ * Creates file names for rotated files to be moved to.
+ */
 public class RotatingFilePattern {
 
     private static final Locale DEFAULT_LOCALE = Locale.getDefault();
@@ -181,6 +184,11 @@ public class RotatingFilePattern {
 
     }
 
+    /**
+     * @param instant an instant used to format timestamps in the pattern
+     *
+     * @return a file, where the name is formatted by this pattern and the given instant
+     */
     public File create(Instant instant) {
         StringBuilder pathNameBuilder = new StringBuilder();
         for (Field field : fields) {
@@ -190,22 +198,37 @@ public class RotatingFilePattern {
         return new File(pathName);
     }
 
+    /**
+     * @return the formatting pattern used
+     */
     public String getPattern() {
         return pattern;
     }
 
+    /**
+     * @return the default locale used for formatting timestamps, unless specified
+     */
     public static Locale getDefaultLocale() {
         return DEFAULT_LOCALE;
     }
 
+    /**
+     * @return the locale used for formatting timestamps
+     */
     public Locale getLocale() {
         return locale;
     }
 
+    /**
+     * @return the default time zone ID used for formatting timestamps, unless specified
+     */
     public static ZoneId getDefaultTimeZoneId() {
         return DEFAULT_TIME_ZONE_ID;
     }
 
+    /**
+     * @return the time zone ID used for formatting timestamps
+     */
     public ZoneId getTimeZoneId() {
         return timeZoneId;
     }
@@ -230,10 +253,16 @@ public class RotatingFilePattern {
         return String.format("RotatingFilePattern{pattern=%s, locale=%s, timeZoneId=%s}", pattern, locale, timeZoneId);
     }
 
+    /**
+     * @return a {@link Builder builder} to construct {@link RotatingFilePattern}s
+     */
     public static Builder builder() {
         return new Builder();
     }
 
+    /**
+     * {@link Builder builder} to construct {@link RotatingFilePattern}s.
+     */
     public static final class Builder {
 
         private String pattern;
@@ -244,21 +273,50 @@ public class RotatingFilePattern {
 
         private Builder() {}
 
+        /**
+         * Sets the pattern for formatting the created file names, e.g.,
+         * {@code /tmp/app-%d{yyyyMMdd-HHmmss.SSS}.log}. The value passed inside
+         * {@code %d{...}} directive will be rendered using a
+         * {@link DateTimeFormatter}. {@code %%} directive renders a single
+         * {@code %} character.
+         *
+         * @param pattern the formatting pattern, e.g.,
+         *                {@code /tmp/app-%d{yyyyMMdd-HHmmss.SSS}.log}
+         *
+         * @return this builder
+         */
         public Builder pattern(String pattern) {
             this.pattern = Objects.requireNonNull(pattern, "pattern");
             return this;
         }
 
+        /**
+         * Sets the locale used while formatting timestamps passed in the pattern.
+         *
+         * @param locale the locale
+         *
+         * @return this builder
+         */
         public Builder locale(Locale locale) {
             this.locale = Objects.requireNonNull(locale, "locale");
             return this;
         }
 
+        /**
+         * Sets the time zone ID used while formatting timestamps passed in the pattern.
+         *
+         * @param timeZoneId the time zone ID
+         *
+         * @return this builder
+         */
         public Builder timeZoneId(ZoneId timeZoneId) {
             this.timeZoneId = Objects.requireNonNull(timeZoneId, "timeZoneId");
             return this;
         }
 
+        /**
+         * @return a {@link RotatingFilePattern} instance constructed using this configuration
+         */
         public RotatingFilePattern build() {
             validate();
             return new RotatingFilePattern(this);
