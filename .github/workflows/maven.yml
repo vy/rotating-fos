@@ -55,11 +55,11 @@ jobs:
         shell: bash
         run: ./mvnw -V -B --no-transfer-progress -e "-DtrimStackTrace=false" exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.vlkan.rfos.SchedulerShutdownTestApp
 
-  deploy-snapshot:
+  deploy:
 
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == "refs/heads/master"
+    if: github.repository == 'vy/rotating-fos' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/release/'))
 
     steps:
 
@@ -82,12 +82,62 @@ jobs:
           architecture: x64
 
       - name: Import GPG private key
-        run: echo -n "$GPG_PKEY" | base64 --decode | gpg -v --batch --import --yes --pinentry-mode error
+        run: |
+          echo -n "$GPG_PKEY" \
+          | base64 --decode \
+          | gpg -v --batch --import --yes --pinentry-mode error
         env:
           GPG_PKEY: ${{ secrets.GPG_PKEY }}
 
+      - name: Export artifact version
+        run: |
+          ./mvnw \
+            --quiet --batch-mode -DforceStdout=true \
+            -Dexpression=project.version \
+            help:evaluate \
+            | tee /tmp/mvnw-project-version.out
+
+      - name: Check version (SNAPSHOT)
+        if: github.ref == 'refs/heads/master'
+        run: |
+          export REVISION=$(</tmp/mvnw-project-version.out)
+          [[ "$REVISION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$ ]] || {
+            echo "was expecting a snapshot version, found: $REVISION" 1>&2
+            exit 1
+          }
+
+      - name: Check version (RELEASE)
+        if: startsWith(github.ref, 'refs/heads/release/')
+        run: |
+          export REVISION=$(</tmp/mvnw-project-version.out)
+          [[ "${GITHUB_REF/refs\/heads\/release\//}" == "$REVISION" ]] || {
+            echo "git ref mismatches with the version: \"$GITHUB_REF\" != \"$REVISION\"" 1>&2
+            exit 1
+          }
+          [[ "$REVISION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "was expecting a release version, found: \"$REVISION\"" 1>&2
+            exit 1
+          }
+          export CHANGELOG_VERSION=$(head -n 1 CHANGELOG.md | sed -r 's/^### \(.*\) v(.*)$/\1/')
+          [[ "$REVISION" == "$CHANGELOG_VERSION" ]] || {
+            echo "version doesn't match the one in the CHANGELOG: \"$REVISION\" != \"$CHANGELOG_VERSION\"" 1>&2
+            exit 1
+          }
+          export CURRENT_DATE=$(date +%Y-%m-%d)
+          export CHANGELOG_DATE=$(head -n 1 CHANGELOG.md | sed -r 's/^### \((.*)\) v.*$/\1/')
+          [[ "$CURRENT_DATE" == "$CHANGELOG_DATE" ]] || {
+            echo "date doesn't match the one in the CHANGELOG: \"$CURRENT_DATE\" == \"$CHANGELOG_DATE\"" 1>&2
+            exit 1
+          }
+
       - name: Deploy
-        run: ./mvnw -DskipTests=true -DperformRelease=true --settings .github/maven-settings.xml verify gpg:sign install:install deploy:deploy
+        run: |
+          ./mvnw \
+            -V -B --no-transfer-progress -e \
+            -DskipTests=true \
+            -DperformRelease=true \
+            --settings .github/maven-settings.xml \
+            verify gpg:sign install:install deploy:deploy
         env:
           GPG_PKEY_ID: ${{ secrets.GPG_PKEY_ID }}
           GPG_PKEY_PASS: ${{ secrets.GPG_PKEY_PASS }}
