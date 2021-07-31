@@ -111,7 +111,7 @@ jobs:
         run: |
           export REVISION=$(</tmp/mvnw-project-version.out)
           [[ "${GITHUB_REF/refs\/heads\/release\//}" == "$REVISION" ]] || {
-            echo "git ref mismatches with the version: \"$GITHUB_REF\" != \"$REVISION\"" 1>&2
+            echo "git ref \"$GITHUB_REF\" mismatches with the version: \"$REVISION\"" 1>&2
             exit 1
           }
           [[ "$REVISION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
@@ -120,13 +120,13 @@ jobs:
           }
           export CHANGELOG_VERSION=$(head -n 1 CHANGELOG.md | sed -r 's/^### \(.*\) v(.*)$/\1/')
           [[ "$REVISION" == "$CHANGELOG_VERSION" ]] || {
-            echo "version doesn't match the one in the CHANGELOG: \"$REVISION\" != \"$CHANGELOG_VERSION\"" 1>&2
+            echo "version \"$REVISION\" doesn't match the one in the CHANGELOG: \"$CHANGELOG_VERSION\"" 1>&2
             exit 1
           }
           export CURRENT_DATE=$(date +%Y-%m-%d)
           export CHANGELOG_DATE=$(head -n 1 CHANGELOG.md | sed -r 's/^### \((.*)\) v.*$/\1/')
           [[ "$CURRENT_DATE" == "$CHANGELOG_DATE" ]] || {
-            echo "date doesn't match the one in the CHANGELOG: \"$CURRENT_DATE\" == \"$CHANGELOG_DATE\"" 1>&2
+            echo "current date \"$CURRENT_DATE\" doesn't match the one in the CHANGELOG: \"$CHANGELOG_DATE\"" 1>&2
             exit 1
           }
 
