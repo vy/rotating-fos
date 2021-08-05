@@ -24,7 +24,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
 
@@ -131,13 +131,15 @@ jobs:
           }
 
       - name: Deploy
+        # "package" phase is necessary before "gpg:sign" goal.
         run: |
           ./mvnw \
             -V -B --no-transfer-progress -e \
             -DskipTests=true \
             -DperformRelease=true \
+            -DdeployAtEnd=true \
             --settings .github/maven-settings.xml \
-            verify gpg:sign install:install deploy:deploy
+            package gpg:sign install:install deploy:deploy
         env:
           GPG_PKEY_ID: ${{ secrets.GPG_PKEY_ID }}
           GPG_PKEY_PASS: ${{ secrets.GPG_PKEY_PASS }}
