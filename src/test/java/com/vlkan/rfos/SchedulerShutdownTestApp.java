@@ -98,7 +98,9 @@ public enum SchedulerShutdownTestApp {;
 
         // Verify the 1st rotation.
         LOGGER.info("verifying the 1st rotation");
-        long expectedRotationDelay1Millis1 = rotationDelay1Millis + /* extra threshold */ 100;
+        long expectedRotationDelay1Millis1 = Math.addExact(
+                rotationDelay1Millis,
+                /* extra threshold */ 1_000L);
         Mockito
                 .verify(callback, Mockito.timeout(expectedRotationDelay1Millis1))
                 .onTrigger(Mockito.eq(policy), Mockito.any(Instant.class));
