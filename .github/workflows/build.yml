@@ -12,7 +12,7 @@
 # See the License for the specific language governing permits and
 # limitations under the License.
 
-name: CI
+name: build
 
 on: [push]
 
