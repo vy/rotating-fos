@@ -1,0 +1,104 @@
+[
+    {
+        "jmhVersion" : "1.21",
+        "benchmark" : "com.vlkan.rfos.RotatingFileOutputStreamBenchmark.fos_1b",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 0,
+        "jvm" : "C:\\hostedtoolcache\\windows\\Java_Temurin-Hotspot_jdk\\8.0.302-8\\x64\\jre\\bin\\java.exe",
+        "jvmArgs" : [
+            "-Xms256m",
+            "-Dmaven.home=C:/ProgramData/chocolatey/lib/maven/apache-maven-3.8.2",
+            "-Dmaven.multiModuleProjectDirectory=D:/a/rotating-fos/rotating-fos"
+        ],
+        "jdkVersion" : "1.8.0_302",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "25.302-b08",
+        "warmupIterations" : 0,
+        "warmupTime" : "20 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 1,
+        "measurementTime" : "3 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 3641495.7249501357,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 3641495.7249501357,
+                "50.0" : 3641495.7249501357,
+                "90.0" : 3641495.7249501357,
+                "95.0" : 3641495.7249501357,
+                "99.0" : 3641495.7249501357,
+                "99.9" : 3641495.7249501357,
+                "99.99" : 3641495.7249501357,
+                "99.999" : 3641495.7249501357,
+                "99.9999" : 3641495.7249501357,
+                "100.0" : 3641495.7249501357
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    3641495.7249501357
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.21",
+        "benchmark" : "com.vlkan.rfos.RotatingFileOutputStreamBenchmark.fos_ba",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 0,
+        "jvm" : "C:\\hostedtoolcache\\windows\\Java_Temurin-Hotspot_jdk\\8.0.302-8\\x64\\jre\\bin\\java.exe",
+        "jvmArgs" : [
+            "-Xms256m",
+            "-Dmaven.home=C:/ProgramData/chocolatey/lib/maven/apache-maven-3.8.2",
+            "-Dmaven.multiModuleProjectDirectory=D:/a/rotating-fos/rotating-fos"
+        ],
+        "jdkVersion" : "1.8.0_302",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "25.302-b08",
+        "warmupIterations" : 0,
+        "warmupTime" : "20 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 1,
+        "measurementTime" : "3 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 1296171.7333858823,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1296171.7333858823,
+                "50.0" : 1296171.7333858823,
+                "90.0" : 1296171.7333858823,
+                "95.0" : 1296171.7333858823,
+                "99.0" : 1296171.7333858823,
+                "99.9" : 1296171.7333858823,
+                "99.99" : 1296171.7333858823,
+                "99.999" : 1296171.7333858823,
+                "99.9999" : 1296171.7333858823,
+                "100.0" : 1296171.7333858823
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    1296171.7333858823
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+
