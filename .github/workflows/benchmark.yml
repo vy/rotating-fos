@@ -20,11 +20,15 @@ jobs:
 
   run:
 
+    if: github.repository == 'vy/rotating-fos'
+
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
+        javaVersion: [8, 11, 17]
+        concurrency: [1, 2]
 
     steps:
 
@@ -48,23 +52,99 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: ./mvnw -V -B --no-transfer-progress -e -DtrimStackTrace=false verify
-
-      - name: Test scheduler shutdown
-        timeout-minutes: 1
-        # pwsh (the default shell on Windows) hijacks "exec" keyword
         shell: bash
-        run: ./mvnw -V -B --no-transfer-progress -e -DtrimStackTrace=false -Dexec.classpathScope=test -Dexec.mainClass=com.vlkan.rfos.SchedulerShutdownTestApp exec:java
+        run: |
+          ./mvnw \
+            --show-version --batch-mode --errors --no-transfer-progress \
+            -DtrimStackTrace=false \
+            -DskipTests=true \
+            package
+
+      - name: Setup JDK ${{ matrix.javaVersion }}
+        if: matrix.javaVersion != 8
+        uses: actions/setup-java@v2.3.1
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.javaVersion }}
+          java-package: jdk
+          architecture: x64
+          cache: maven
 
       - name: Run benchmark
         timeout-minutes: 60
         # pwsh (the default shell on Windows) hijacks "exec" keyword
         shell: bash
-        run: ./mvnw -V -B --no-transfer-progress -e -DtrimStackTrace=false -Dexec.classpathScope=test -Dexec.mainClass=com.vlkan.rfos.RotatingFileOutputStreamBenchmark -Drfos.benchmark.quick -Drfos.benchmark.concurrency=8 -Drfos.benchmark.jsonOutputFile=benchmarkResult-${{ runner.os }}.json exec:java
+        run: |
+          ./mvnw \
+            --show-version --batch-mode --errors --no-transfer-progress \
+            -Dexec.classpathScope=test \
+            -Dexec.mainClass=com.vlkan.rfos.RotatingFileOutputStreamBenchmark \
+            -Drfos.benchmark.quick \
+            -Drfos.benchmark.concurrency=${{ matrix.concurrency }} \
+            -Drfos.benchmark.jsonOutputFile=results-${{ runner.os }}-J${{ matrix.javaVersion }}-C${{ matrix.concurrency }}.json \
+            exec:java
 
-      - name: Upload results
-        uses: actions/upload-artifact@v2
+      - name: Stage benchmark results for commit
+        shell: bash
+        run: |
+          ./mvnw \
+            --show-version --batch-mode --quiet \
+            -DforceStdout=true \
+            -Dexpression=project.version \
+            help:evaluate \
+            | tee mvnw-project-version.out
+          echo
+          export REVISION=$(<mvnw-project-version.out)
+          export BRANCH_NAME=$(echo "$GITHUB_REF" | sed -r 's/refs\/heads\///g')
+          export INSTANT=$(date -u +%Y%m%d)
+          export RUN_ID=$(printf "%020d" "$GITHUB_RUN_ID")
+          export RESULTS_DIR="benchmark/results/$REVISION/$BRANCH_NAME-$INSTANT-$RUN_ID"
+          mkdir -p "$RESULTS_DIR"
+          mv -v results-*.json "$RESULTS_DIR/"
+
+      - name: Commit benchmark results
+        shell: bash
+        run: |
+          git checkout -B gh-pages origin/gh-pages
+          git add benchmark/results
+          git commit -a -m "Add benchmark results for ${{ runner.os }}, Java ${{ matrix.javaVersion }}, and concurrency ${{ matrix.concurrency }}."
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git push origin gh-pages
+
+  index:
+
+    runs-on: ubuntu-latest
+    needs: run
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
         with:
-          name: benchmarkResult
-          path: benchmarkResult-${{ runner.os }}.json
-          if-no-files-found: error
+          ref: gh-pages
+
+      - name: Setup Python 3
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Index benchmark results
+        shell: bash
+        run: |
+          python -c '\
+            import json, os, re;\
+            filepaths=[re.sub("^benchmark/results/", "", os.path.join(root,filename)) \
+                for (root, dirs, filenames) in os.walk("benchmark/results") \
+                    for filename in filenames]; \
+            filepaths.remove("index.json"); \
+            print(json.dumps(filepaths))' \
+          >benchmark/results/index.json
+
+      - name: Commit benchmark results index
+        shell: bash
+        run: |
+          git commit benchmark/results/index.json -m "Update benchmark results index."
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git push origin gh-pages

@@ -48,13 +48,24 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: ./mvnw -V -B --no-transfer-progress -e "-DtrimStackTrace=false" verify
+        shell: bash
+        run: |
+          ./mvnw \
+            --show-version --batch-mode --errors --no-transfer-progress \
+            -DtrimStackTrace=false \
+            -DskipTests=true \
+            verify
 
       - name: Test scheduler shutdown
         timeout-minutes: 1
         # pwsh (the default shell on Windows) hijacks "exec" keyword
         shell: bash
-        run: ./mvnw -V -B --no-transfer-progress -e "-DtrimStackTrace=false" -Dexec.classpathScope=test -Dexec.mainClass=com.vlkan.rfos.SchedulerShutdownTestApp exec:java
+        run: |
+          ./mvnw \
+            --show-version --batch-mode --errors --no-transfer-progress \
+            -Dexec.classpathScope=test \
+            -Dexec.mainClass=com.vlkan.rfos.SchedulerShutdownTestApp \
+            exec:java
 
   deploy:
 
