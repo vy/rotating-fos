@@ -14,7 +14,9 @@
  See the License for the specific language governing permits and
  limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -38,7 +40,7 @@
         <developer>
             <id>vy</id>
             <name>Volkan Yazıcı</name>
-            <email>volkan.yazici@gmail.com</email>
+            <email>volkan@yazi.ci</email>
             <organization>Volkan Yazıcı's Soap Co.</organization>
             <organizationUrl>https://vlkan.com/</organizationUrl>
             <roles>
@@ -81,12 +83,14 @@
         <!-- library versions -->
         <assertj-core.version>3.21.0</assertj-core.version>
         <errorprone.version>2.6.0</errorprone.version>
+        <jmh.version>1.21</jmh.version>
         <junit.version>5.8.1</junit.version>
         <log4j.version>2.14.1</log4j.version>
         <mockito.version>3.12.4</mockito.version>
         <slf4j.version>1.7.32</slf4j.version>
 
         <!-- plugin versions -->
+        <build-helper-maven-plugin.version>3.2.0</build-helper-maven-plugin.version>
         <flatten-maven-plugin.version>1.2.7</flatten-maven-plugin.version>
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-enforcer-plugin.version>3.0.0</maven-enforcer-plugin.version>
@@ -136,6 +140,20 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>${jmh.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>${jmh.version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -160,6 +178,11 @@
                             <groupId>com.google.errorprone</groupId>
                             <artifactId>error_prone_core</artifactId>
                             <version>${errorprone.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.openjdk.jmh</groupId>
+                            <artifactId>jmh-generator-annprocess</artifactId>
+                            <version>${jmh.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
@@ -248,6 +271,26 @@
                         <goals>
                             <goal>clean</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>add-perf-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/test/perf</source>
+                            </sources>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
