@@ -81,37 +81,74 @@ jobs:
             -Dexec.mainClass=com.vlkan.rfos.RotatingFileOutputStreamBenchmark \
             -Drfos.benchmark.quick \
             -Drfos.benchmark.concurrency=${{ matrix.concurrency }} \
-            -Drfos.benchmark.jsonOutputFile=results-${{ runner.os }}-J${{ matrix.javaVersion }}-C${{ matrix.concurrency }}.json \
+            -Drfos.benchmark.jsonOutputFile=results.json \
             exec:java
 
       - name: Stage benchmark results for commit
         shell: bash
         run: |
+
+          # Determine the artifact version.
+          set -x
           ./mvnw \
-            --show-version --batch-mode --quiet \
+            --batch-mode --quiet \
             -DforceStdout=true \
             -Dexpression=project.version \
             help:evaluate \
             | tee mvnw-project-version.out
           echo
+
+          # Determine the results file path.
           export REVISION=$(<mvnw-project-version.out)
           export BRANCH_NAME=$(echo "$GITHUB_REF" | sed -r 's/refs\/heads\///g')
           export INSTANT=$(date -u +%Y%m%d)
           export RUN_ID=$(printf "%020d" "$GITHUB_RUN_ID")
-          export RESULTS_DIR="benchmark/results/$REVISION/$BRANCH_NAME-$INSTANT-$RUN_ID"
-          mkdir -p "$RESULTS_DIR"
-          mv -v results-*.json "$RESULTS_DIR/"
+          export RESULTS_FILEPATH="benchmark/results/$REVISION/$BRANCH_NAME-$INSTANT-$RUN_ID/results-${{ runner.os }}-J${{ matrix.javaVersion }}-C${{ matrix.concurrency }}.json"
+
+          # Move the results file.
+          mkdir -v -p $(dirname "$RESULTS_FILEPATH")
+          mv -v results.json "$RESULTS_FILEPATH"
+
+          # Stash changes for commit.
+          git add "$RESULTS_FILEPATH"
+          git stash save
+          git clean -f
 
       - name: Commit benchmark results
+        timeout-minutes: 1
         shell: bash
         run: |
+
+          # Checkout the results branch.
+          set -x
           git fetch origin gh-pages
           git checkout -B gh-pages origin/gh-pages
+
+          # Stage the stashed changes.
+          git stash show -p | git apply
           git add benchmark/results
+          git status --porcelain
+          test $(git status --porcelain | wc -l) -gt 0 || exit 0
+
+          # Commit changes.
           git config user.name github-actions
           git config user.email github-actions@github.com
           git commit -a -m "Add benchmark results for ${{ runner.os }}, Java ${{ matrix.javaVersion }}, and concurrency ${{ matrix.concurrency }}."
-          git push origin gh-pages
+
+          # Push changes in a loop to allow concurrent repository modifications.
+          export RETRY=0
+          while [ 1 ]; do
+            set +e
+            git push origin gh-pages 2>&1 | tee git-push.out
+            if [ $? -eq 0 ]; then
+              exit 0
+            else
+              set -e
+              let RETRY+=1
+              echo "retry #$RETRY"
+              git pull -r origin gh-pages
+            fi
+          done
 
   index:
 
@@ -131,21 +168,42 @@ jobs:
           python-version: 3.x
 
       - name: Index benchmark results
+        timeout-minutes: 1
         shell: bash
         run: |
-          python -c '\
-            import json, os, re;\
-            filepaths=[re.sub("^benchmark/results/", "", os.path.join(root,filename)) \
-                for (root, dirs, filenames) in os.walk("benchmark/results") \
-                    for filename in filenames]; \
-            filepaths.remove("index.json"); \
-            print(json.dumps(filepaths))' \
-          >benchmark/results/index.json
 
-      - name: Commit benchmark results index
-        shell: bash
-        run: |
+          # Configure the git user.
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git commit benchmark/results/index.json -m "Update benchmark results index."
-          git push origin gh-pages
+
+          # Push changes in a loop to allow concurrent repository modifications.
+          export RETRY=0
+          while [ 1 ]; do
+
+            # Generate the index file.
+            python -c '\
+              import json, os, re;\
+              filepaths=[re.sub("^benchmark/results/", "", os.path.join(root,filename)) \
+                  for (root, dirs, filenames) in os.walk("benchmark/results") \
+                      for filename in filenames]; \
+              filepaths.remove("index.json"); \
+              print(json.dumps(filepaths))' \
+            >benchmark/results/index.json
+
+            # Commit the index file.
+            git add benchmark/results/index.json
+            git commit benchmark/results/index.json -m "Update benchmark results index."
+
+            # Push the index file.
+            set +e
+            git push origin gh-pages 2>&1 | tee git-push.out
+            if [ $? -eq 0 ]; then
+              exit 0
+            else
+              set -e
+              let RETRY+=1
+              echo "retry #$RETRY"
+              git pull -r origin gh-pages
+            fi
+
+          done
