@@ -1,0 +1,102 @@
+[
+    {
+        "jmhVersion" : "1.33",
+        "benchmark" : "com.vlkan.rfos.RotatingFileOutputStreamBenchmark.fos_1b",
+        "mode" : "thrpt",
+        "threads" : 2,
+        "forks" : 0,
+        "jvm" : "/usr/lib/jvm/adoptopenjdk-11-hotspot-amd64/bin/java",
+        "jvmArgs" : [
+            "-Dmaven.home=/home/runner/work/rotating-fos",
+            "-Dmaven.multiModuleProjectDirectory=/home/runner/work/rotating-fos/rotating-fos"
+        ],
+        "jdkVersion" : "11.0.11",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "11.0.11+9",
+        "warmupIterations" : 0,
+        "warmupTime" : "20 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 1,
+        "measurementTime" : "3 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 2192296.840091147,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 2192296.840091147,
+                "50.0" : 2192296.840091147,
+                "90.0" : 2192296.840091147,
+                "95.0" : 2192296.840091147,
+                "99.0" : 2192296.840091147,
+                "99.9" : 2192296.840091147,
+                "99.99" : 2192296.840091147,
+                "99.999" : 2192296.840091147,
+                "99.9999" : 2192296.840091147,
+                "100.0" : 2192296.840091147
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    2192296.840091147
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.33",
+        "benchmark" : "com.vlkan.rfos.RotatingFileOutputStreamBenchmark.fos_ba",
+        "mode" : "thrpt",
+        "threads" : 2,
+        "forks" : 0,
+        "jvm" : "/usr/lib/jvm/adoptopenjdk-11-hotspot-amd64/bin/java",
+        "jvmArgs" : [
+            "-Dmaven.home=/home/runner/work/rotating-fos",
+            "-Dmaven.multiModuleProjectDirectory=/home/runner/work/rotating-fos/rotating-fos"
+        ],
+        "jdkVersion" : "11.0.11",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "11.0.11+9",
+        "warmupIterations" : 0,
+        "warmupTime" : "20 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 1,
+        "measurementTime" : "3 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 1595190.926801633,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1595190.926801633,
+                "50.0" : 1595190.926801633,
+                "90.0" : 1595190.926801633,
+                "95.0" : 1595190.926801633,
+                "99.0" : 1595190.926801633,
+                "99.9" : 1595190.926801633,
+                "99.99" : 1595190.926801633,
+                "99.999" : 1595190.926801633,
+                "99.9999" : 1595190.926801633,
+                "100.0" : 1595190.926801633
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    1595190.926801633
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+
