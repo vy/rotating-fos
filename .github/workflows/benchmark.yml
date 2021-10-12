@@ -18,7 +18,7 @@ on: [workflow_dispatch]
 
 jobs:
 
-  run:
+  build:
 
     if: github.repository == 'vy/rotating-fos'
 
@@ -27,8 +27,6 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        javaVersion: [8, 11, 17]
-        concurrency: [1, 2]
 
     steps:
 
@@ -60,17 +58,43 @@ jobs:
             -DskipTests=true \
             package
 
-      - name: Setup JDK ${{ matrix.javaVersion }}
-        if: matrix.javaVersion != 8
+      - name: Store build OS
+        shell: bash
+        run: touch "${{ matrix.os }}.txt"
+
+  run:
+
+    # GitHub Actions workflows don't provide a way to conditionally depend on a job.
+    # That is, it is not possible to depend on "build" job if the OS matches.
+    # We need this to make sure, say, Windows nodes running benchmarks use the build performed by a Windows node.
+    # "if" conditions at the job-level don't allow matrix expansion: https://github.community/t/matrix-cannot-be-used-in-jobs-level-if/17177
+    # We cannot force exit in the very first step if the OS name doesn't match: https://stackoverflow.com/questions/60589373/how-to-force-to-exit-in-github-actions-step
+    # I am out of ideas, except checking OS name at each step.
+
+    needs: build
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        jdk: [8, 11, 17]
+        concurrency: [1, 2]
+
+    steps:
+
+      - name: Setup JDK ${{ matrix.jdk }}
+        if: hashFiles('${{ matrix.os }}.txt') != '' && matrix.jdk != 8
         uses: actions/setup-java@v2.3.1
         with:
           distribution: temurin
-          java-version: ${{ matrix.javaVersion }}
+          java-version: ${{ matrix.jdk }}
           java-package: jdk
           architecture: x64
           cache: maven
 
       - name: Run benchmark
+        if: hashFiles('${{ matrix.os }}.txt') != ''
         timeout-minutes: 60
         # pwsh (the default shell on Windows) hijacks "exec" keyword
         shell: bash
@@ -85,6 +109,7 @@ jobs:
             exec:java
 
       - name: Stage benchmark results for commit
+        if: hashFiles('${{ matrix.os }}.txt') != ''
         shell: bash
         run: |
 
@@ -103,7 +128,7 @@ jobs:
           export BRANCH_NAME=$(echo "$GITHUB_REF" | sed -r 's/refs\/heads\///g')
           export INSTANT=$(date -u +%Y%m%d)
           export RUN_ID=$(printf "%020d" "$GITHUB_RUN_ID")
-          export RESULTS_FILEPATH="benchmark/results/$REVISION/$BRANCH_NAME-$INSTANT-$RUN_ID/results-${{ runner.os }}-J${{ matrix.javaVersion }}-C${{ matrix.concurrency }}.json"
+          export RESULTS_FILEPATH="benchmark/results/$REVISION/$BRANCH_NAME-$INSTANT-$RUN_ID/results-${{ runner.os }}-J${{ matrix.jdk }}-C${{ matrix.concurrency }}.json"
 
           # Move the results file.
           mkdir -v -p $(dirname "$RESULTS_FILEPATH")
@@ -115,6 +140,7 @@ jobs:
           git clean -f
 
       - name: Commit benchmark results
+        if: hashFiles('${{ matrix.os }}.txt') != ''
         timeout-minutes: 1
         shell: bash
         run: |
@@ -133,7 +159,7 @@ jobs:
           # Commit changes.
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git commit -a -m "Add benchmark results for ${{ runner.os }}, Java ${{ matrix.javaVersion }}, and concurrency ${{ matrix.concurrency }}."
+          git commit -a -m "Add benchmark results for ${{ runner.os }}, JDK ${{ matrix.jdk }}, and concurrency ${{ matrix.concurrency }}."
 
           # Push changes in a loop to allow concurrent repository modifications.
           export RETRY=0
