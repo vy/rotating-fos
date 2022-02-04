@@ -144,3 +144,13 @@ jobs:
           GPG_PKEY_PASS: ${{ secrets.GPG_PKEY_PASS }}
           NEXUS_USER: ${{ secrets.NEXUS_USER }}
           NEXUS_PASS: ${{ secrets.NEXUS_PASS }}
+
+      - name: Tag version (RELEASE)
+        if: startsWith(github.ref, 'refs/heads/release/')
+        run: |
+          export REVISION=$(</tmp/mvnw-project-version.out)
+          export TAG="v$REVISION"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag "$TAG"
+          git push origin "$TAG"
