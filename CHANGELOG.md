@@ -14,6 +14,10 @@
  limitations under the License.
 -->
 
+### (2022-02-04) v0.9.4
+
+- Fixed broken rolling support when `maxBackupCount > 2`. (#49)
+
 ### (2021-07-31) v0.9.3
 
 - Improved Javadocs.

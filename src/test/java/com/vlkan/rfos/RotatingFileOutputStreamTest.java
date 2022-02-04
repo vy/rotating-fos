@@ -583,7 +583,7 @@ class RotatingFileOutputStreamTest {
                 .builder()
                 .executorService(executorService)
                 .file(file)
-                .maxBackupCount(2)
+                .maxBackupCount(3)
                 .policy(policy)
                 .callbacks(Collections.singleton(callback))
                 .build();
@@ -593,6 +593,7 @@ class RotatingFileOutputStreamTest {
         File backupFile0 = new File(tmpDir, "maxBackupCount.log.0");
         File backupFile1 = new File(tmpDir, "maxBackupCount.log.1");
         File backupFile2 = new File(tmpDir, "maxBackupCount.log.2");
+        File backupFile3 = new File(tmpDir, "maxBackupCount.log.3");
 
         // Write some without triggering rotation.
         byte[] content1 = {'1'};
@@ -604,6 +605,7 @@ class RotatingFileOutputStreamTest {
         Assertions.assertThat(backupFile0).doesNotExist();
         Assertions.assertThat(backupFile1).doesNotExist();
         Assertions.assertThat(backupFile2).doesNotExist();
+        Assertions.assertThat(backupFile3).doesNotExist();
 
         // Write some and trigger the 1st rotation.
         byte[] content2 = {'2'};
@@ -624,6 +626,7 @@ class RotatingFileOutputStreamTest {
         Assertions.assertThat(backupFile0).hasBinaryContent(content1);
         Assertions.assertThat(backupFile1).doesNotExist();
         Assertions.assertThat(backupFile2).doesNotExist();
+        Assertions.assertThat(backupFile3).doesNotExist();
 
         // Write some and trigger the 2nd rotation.
         byte[] content3 = {'3'};
@@ -643,6 +646,7 @@ class RotatingFileOutputStreamTest {
         Assertions.assertThat(backupFile0).hasBinaryContent(content2);
         Assertions.assertThat(backupFile1).hasBinaryContent(content1);
         Assertions.assertThat(backupFile2).doesNotExist();
+        Assertions.assertThat(backupFile3).doesNotExist();
 
         // Write some and trigger the 3rd rotation.
         byte[] content4 = {'4'};
@@ -661,7 +665,48 @@ class RotatingFileOutputStreamTest {
         Assertions.assertThat(file).hasBinaryContent(content4);
         Assertions.assertThat(backupFile0).hasBinaryContent(content3);
         Assertions.assertThat(backupFile1).hasBinaryContent(content2);
-        Assertions.assertThat(backupFile2).doesNotExist();
+        Assertions.assertThat(backupFile2).hasBinaryContent(content1);
+        Assertions.assertThat(backupFile3).doesNotExist();
+
+        // Write some and trigger the 4th rotation.
+        byte[] content5 = {'5'};
+        stream.write(content5);
+        stream.flush();
+
+        // Verify the 4th rotation.
+        inOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.any(),
+                        Mockito.eq(backupFile0));
+
+        // Verify files after the 4th rotation.
+        Assertions.assertThat(file).hasBinaryContent(content5);
+        Assertions.assertThat(backupFile0).hasBinaryContent(content4);
+        Assertions.assertThat(backupFile1).hasBinaryContent(content3);
+        Assertions.assertThat(backupFile2).hasBinaryContent(content2);
+        Assertions.assertThat(backupFile3).doesNotExist();
+
+        // Write some and trigger the 5th rotation.
+        byte[] content6 = {'6'};
+        stream.write(content6);
+        stream.flush();
+
+        // Verify the 5th rotation.
+        inOrder
+                .verify(callback)
+                .onSuccess(
+                        Mockito.same(policy),
+                        Mockito.any(),
+                        Mockito.eq(backupFile0));
+
+        // Verify files after the 5th rotation.
+        Assertions.assertThat(file).hasBinaryContent(content6);
+        Assertions.assertThat(backupFile0).hasBinaryContent(content5);
+        Assertions.assertThat(backupFile1).hasBinaryContent(content4);
+        Assertions.assertThat(backupFile2).hasBinaryContent(content3);
+        Assertions.assertThat(backupFile3).doesNotExist();
 
         // Close the stream to avoid Windows failing to clean the temporary directory.
         stream.close();

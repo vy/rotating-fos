@@ -175,11 +175,10 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         File dstFile = getBackupFile(config.getMaxBackupCount() - 1);
         for (int backupIndex = config.getMaxBackupCount() - 2; backupIndex >= 0; backupIndex--) {
             File srcFile = getBackupFile(backupIndex);
-            if (!srcFile.exists()) {
-                continue;
+            if (srcFile.exists()) {
+                LOGGER.debug("renaming backup {srcFile={}, dstFile={}}", srcFile, dstFile);
+                renameFile(srcFile, dstFile);
             }
-            LOGGER.debug("renaming backup {srcFile={}, dstFile={}}", srcFile, dstFile);
-            renameFile(srcFile, dstFile);
             dstFile = srcFile;
         }
     }
