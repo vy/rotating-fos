@@ -1,18 +1,14 @@
 ---
 name: Bug report
 about: Submit a bug report
-title: ''
-labels: ''
-assignees: ''
-
 ---
 
 **Version:** ...
 
-**Description**
+## Description
 A clear and concise description of what the bug is.
 
-**Configuration**
+## Configuration
 ```java
 RotationConfig
         .builder()
@@ -22,9 +18,9 @@ RotationConfig
         .build();
 ```
 
-**`LoggingRotationCallback` logs**
+## `LoggingRotationCallback` logs
 ...
 
-**Additional context**
+## Additional context
 - Is access to `RotatingFileOutputStream` multi-threaded?
 - Which `RotatingFileOutputStream` methods are used?
