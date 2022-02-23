@@ -5,6 +5,8 @@ about: Submit a bug report
 
 **Version:** ...
 
+**Operating system:** ...
+
 ## Description
 A clear and concise description of what the bug is.
 
@@ -18,8 +20,11 @@ RotationConfig
         .build();
 ```
 
-## `LoggingRotationCallback` logs
-...
+## Logs
+```
+Stacktraces, errors, etc. relevant applications logs.
+`LoggingRotationCallback` logs will be really handy.
+```
 
 ## Additional context
 - Is access to `RotatingFileOutputStream` multi-threaded?
