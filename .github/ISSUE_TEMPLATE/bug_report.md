@@ -3,14 +3,18 @@ name: Bug report
 about: Submit a bug report
 ---
 
-**Version:** ...
-
-**Operating system:** ...
-
 ## Description
 A clear and concise description of what the bug is.
 
 ## Configuration
+
+**Version:** ...
+
+**Operating system:** ...
+
+**JDK:** ...
+
+**Rotation configuration:**
 ```java
 RotationConfig
         .builder()
