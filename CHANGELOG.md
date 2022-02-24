@@ -14,6 +14,10 @@
  limitations under the License.
 -->
 
+### (????-??-??) v0.9.5
+
+- Guard against I/O failures while reading file length. (#70)
+
 ### (2022-02-04) v0.9.4
 
 - Fixed broken rolling support when `maxBackupCount > 2`. (#49)

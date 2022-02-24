@@ -29,7 +29,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
@@ -37,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import java.util.zip.GZIPOutputStream;
 
@@ -102,7 +105,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         try {
             FileOutputStream fileOutputStream = new FileOutputStream(config.getFile(), config.isAppend());
             invokeCallbacks(callback -> callback.onOpen(policy, instant, fileOutputStream));
-            long size = config.isAppend() ? config.getFile().length() : 0;
+            long size = config.isAppend() ? readFileLength() : 0;
             return new ByteCountingOutputStream(fileOutputStream, size);
         } catch (IOException error) {
             String message = String.format("file open failure {file=%s}", config.getFile());
@@ -133,7 +136,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         invokeCallbacks(callback -> callback.onTrigger(policy, instant));
 
         // Skip rotation if the file is empty.
-        if (config.getFile().length() == 0) {
+        if (readFileLength() == 0) {
             LOGGER.debug("empty file, skipping rotation {file={}}", config.getFile());
             return;
         }
@@ -169,6 +172,33 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
         // So far, so good;
         invokeCallbacks(callback -> callback.onSuccess(policy, instant, rotatedFile));
 
+    }
+
+    private long readFileLength() throws IOException {
+        File file = config.getFile();
+        // Reading the file length is a tricky business.
+        // We will retry some.
+        Exception lastError = null;
+        for (int trialIndex = 0; trialIndex < 5; trialIndex++) {
+            long fileLength = file.length();
+            if (fileLength != 0) {
+                return fileLength;
+            }
+            // `File#length()` can return 0 due to I/O failures.
+            // We are falling back to NIO for a second attempt.
+            else {
+                Path path = file.toPath();
+                try (FileChannel channel = FileChannel.open(path)) {
+                    return channel.size();
+                } catch (IOException error) {
+                    lastError = error;
+                }
+            }
+            // Scientifically proven retry practice: wait a bit.
+            LockSupport.parkNanos(1);
+        }
+        String message = String.format("file length read failure {file=%s}", file);
+        throw new IOException(message, lastError);
     }
 
     private void renameBackups() throws IOException {
