@@ -189,8 +189,8 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
             // We are falling back to NIO for a second attempt.
             else {
                 Path path = file.toPath();
-                try (FileChannel channel = FileChannel.open(path)) {
-                    return channel.size();
+                try {
+                    return Files.size(path);
                 } catch (IOException error) {
                     lastError = error;
                 }
