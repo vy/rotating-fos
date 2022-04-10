@@ -24,12 +24,13 @@ Rotating FOS 
 
 <br>
 
-`rotating-fos` is a Java 8 library providing `RotatingFileOutputStream` which
-internally rotates a delegate `FileOutputStream` using provided rotation
-policies similar to [logrotate],
-[Log4j] and [Logback].
+<div align = center>
 
+This library provides a `RotatingFileOutputStream` which internally<br>
+rotates a delegate `FileOutputStream` using provided rotation <br>
+policies similar to **[LogRotate]** / **[Log4j]** / **[Logback]** .
 
+</div>
 
 <br>
 <br>
