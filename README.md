@@ -10,11 +10,9 @@ Rotating FOS 
 
 *Rotating File-Output-Streams For Java8*
 
-<br>
-
 ---
 
-<div align = 'center'>
+<div align = center>
 
   **⸢ [Usage] ⸥**
   **⸢ [Caveats] ⸥**
@@ -33,13 +31,16 @@ policies similar to [logrotate],
 
 
 
+<br>
+<br>
 
-
-## Credits
+<h1 align = center> Credits </h1>
 
 ### Creator
 
 **[Volkan Yazıcı]** - `2018 - 2021`
+
+<br>
 
 ### Contributors
 
@@ -50,22 +51,30 @@ policies similar to [logrotate],
   - *Windows-specific Fixes*
   - *Java 9 Module Name*
 
+<br>
+
 **[@kc7bfi]** - `David Robison`
 
   *NPE due to write after close in #26*
-  
+
+<br>  
+
 **[@yawkat]** - `Jonas Konrad`
 
   *`RotatingFileOutputStream`* <br>
   *Thread-Safety Improvements*
 
+<br>
+
 **[@lukasbradley]** - `Lukas Bradley`
+
+<br>
 
 **[@liran2000]** - `Liran Mendelovich`
 
   *Rolling Via `maxBackupCount`*
 
-
+<br>
 
 <!----------------------------------------------------------------------------->
 
