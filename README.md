@@ -2,15 +2,29 @@
 <h1>
 
 Rotating FOS 
-[![Badge Build]][Actions]
 [![Badge Version]][Maven]
 [![Badge License]][License]
+[![Badge Build]][Actions]
 
 </h1>
 
 *Rotating File-Output-Streams For Java8*
 
+<br>
 
+---
+
+<div align = 'center'>
+
+  **⸢ [Usage] ⸥**
+  **⸢ [Caveats] ⸥**
+  **⸢ [Changelog] ⸥**
+  
+</div>
+
+---
+
+<br>
 
 `rotating-fos` is a Java 8 library providing `RotatingFileOutputStream` which
 internally rotates a delegate `FileOutputStream` using provided rotation
@@ -61,6 +75,13 @@ policies similar to [logrotate],
 [License]: LICENSE
 
 
+<!-------------------------------{ QuickLinks }-------------------------------->
+
+[Changelog]: Documentation/Changelog.md
+[Caveats]: Documentation/Caveats.md
+[Usage]: Documentation/Usage.md
+
+
 <!---------------------------------{ Related }--------------------------------->
 
 [LogRotate]: https://github.com/logrotate/logrotate
@@ -70,12 +91,13 @@ policies similar to [logrotate],
 
 <!-------------------------------{ Contributors }------------------------------>
 
+[Volkan Yazıcı]: https://vlkan.com/
+
+[@lukasbradley]: https://github.com/lukasbradley/
 [@liran2000]: https://github.com/liran2000/
 [@pitschr]: https://github.com/pitschr
 [@kc7bfi]: https://github.com/kc7bfi
-[@lukasbradley]: https://github.com/lukasbradley/
 [@yawkat]: https://yawk.at/
-[Volkan Yazıcı]: https://vlkan.com/
 
 
 <!----------------------------------{ Badges }--------------------------------->
