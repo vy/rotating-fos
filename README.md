@@ -42,12 +42,9 @@ policies similar to [logrotate],
 
   *Rolling Via `maxBackupCount`*
 
+
+
 <!----------------------------------------------------------------------------->
-
-[Badge Version]: https://img.shields.io/maven-central/v/com.vlkan.rfos/rotating-fos.svg
-[Badge License]: https://img.shields.io/badge/License-Apache_2.0-blue.svg
-[Badge Build]: https://github.com/vy/rotating-fos/workflows/build/badge.svg
-
 
 [Actions]: https://github.com/vy/rotating-fos/actions
 [Maven]: https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.vlkan.rfos%22
@@ -55,9 +52,14 @@ policies similar to [logrotate],
 [License]: LICENSE
 
 
+<!---------------------------------{ Related }--------------------------------->
+
 [LogRotate]: https://github.com/logrotate/logrotate
 [LogBack]: https://logback.qos.ch/
 [Log4J]: https://logging.apache.org/log4j/
+
+
+<!-------------------------------{ Contributors }------------------------------>
 
 [@liran2000]: https://github.com/liran2000/
 [@pitschr]: https://github.com/pitschr
@@ -65,3 +67,10 @@ policies similar to [logrotate],
 [@lukasbradley]: https://github.com/lukasbradley/
 [@yawkat]: https://yawk.at/
 [Volkan Yazıcı]: https://vlkan.com/
+
+
+<!----------------------------------{ Badges }--------------------------------->
+
+[Badge Version]: https://img.shields.io/maven-central/v/com.vlkan.rfos/rotating-fos.svg
+[Badge License]: https://img.shields.io/badge/License-Apache_2.0-blue.svg
+[Badge Build]: https://github.com/vy/rotating-fos/workflows/build/badge.svg
