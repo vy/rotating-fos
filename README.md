@@ -1,7 +1,16 @@
 
+<h1>
+
+Rotating FOS 
 [![Badge Build]][Actions]
 [![Badge Version]][Maven]
 [![Badge License]][License]
+
+</h1>
+
+*Rotating File-Output-Streams For Java8*
+
+
 
 `rotating-fos` is a Java 8 library providing `RotatingFileOutputStream` which
 internally rotates a delegate `FileOutputStream` using provided rotation
