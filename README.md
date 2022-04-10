@@ -12,20 +12,35 @@ policies similar to [logrotate],
 
 
 
-# Contributors
+## Credits
 
-- [Christoph (pitschr) Pitschmann][Pitschmann] (Windows-specific
-  fixes, `RotationCallback#onOpen()` method, Java 9 module name, scheduler
-  shutdown at exit)
-- [David (kc7bfi) Robison][Robison] (NPE due to write after close in #26)
-- [Jonas (yawkat) Konrad][Konrad] (`RotatingFileOutputStream`
-  thread-safety improvements)
-- [Lukas Bradley][Bradley]
-- [Liran Mendelovich][Mendelovich] (rolling via `maxBackupCount`)
+### Creator
 
-# License
+**[Volkan Yazıcı]** - `2018 - 2021`
 
-Copyright &copy; 2018-2021 [Volkan Yazıcı][Yazıcı]
+### Contributors
+
+**[@pitschr]** - `Christoph Pitschmann`
+
+  - *`RotationCallback#onOpen()` Method*
+  - *Scheduler Shutdown At Exit* 
+  - *Windows-specific Fixes*
+  - *Java 9 Module Name*
+
+**[@kc7bfi]** - `David Robison`
+
+  *NPE due to write after close in #26*
+  
+**[@yawkat]** - `Jonas Konrad`
+
+  *`RotatingFileOutputStream`* <br>
+  *Thread-Safety Improvements*
+
+**[@lukasbradley]** - `Lukas Bradley`
+
+**[@liran2000]** - `Liran Mendelovich`
+
+  *Rolling Via `maxBackupCount`*
 
 <!----------------------------------------------------------------------------->
 
@@ -44,9 +59,9 @@ Copyright &copy; 2018-2021 [Volkan Yazıcı][Yazıcı]
 [LogBack]: https://logback.qos.ch/
 [Log4J]: https://logging.apache.org/log4j/
 
-[Mendelovich]: https://github.com/liran2000/
-[Pitschmann]: https://github.com/pitschr
-[Robison]: https://github.com/kc7bfi
-[Bradley]: https://github.com/lukasbradley/
-[Konrad]: https://yawk.at/
-[Yazıcı]: https://vlkan.com/
+[@liran2000]: https://github.com/liran2000/
+[@pitschr]: https://github.com/pitschr
+[@kc7bfi]: https://github.com/kc7bfi
+[@lukasbradley]: https://github.com/lukasbradley/
+[@yawkat]: https://yawk.at/
+[Volkan Yazıcı]: https://vlkan.com/
