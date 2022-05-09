@@ -18,6 +18,8 @@
 
 - Guard against I/O failures while reading file length. (#70)
 
+- Propagate `IOException`s caught while opening the file. (#86)
+
 ### (2022-02-04) v0.9.4
 
 - Fixed broken rolling support when `maxBackupCount > 2`. (#49)

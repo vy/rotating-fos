@@ -109,7 +109,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
             return new ByteCountingOutputStream(fileOutputStream, size);
         } catch (IOException error) {
             String message = String.format("file open failure {file=%s}", config.getFile());
-            throw new RuntimeException(message);
+            throw new RuntimeException(message, error);
         }
     }
 
