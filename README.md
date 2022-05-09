@@ -176,7 +176,7 @@ methods.
 
 # License
 
-Copyright &copy; 2018-2021 [Volkan Yazıcı](https://vlkan.com/)
+Copyright &copy; 2018-2022 [Volkan Yazıcı](https://vlkan.com/)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
