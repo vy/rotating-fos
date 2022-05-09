@@ -14,6 +14,8 @@
  limitations under the License.
 -->
 
+### (????-??-??) v0.9.6
+
 ### (2022-05-09) v0.9.5
 
 - Guard against I/O failures while reading file length. (#70)
