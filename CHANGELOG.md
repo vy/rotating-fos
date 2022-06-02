@@ -16,7 +16,7 @@
 
 ### (????-??-??) v0.9.6
 
-### (2022-05-09) v0.9.5
+### (2022-06-02) v0.9.5
 
 - Guard against I/O failures while reading file length. (#70)
 
