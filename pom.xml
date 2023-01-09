@@ -81,7 +81,7 @@
         <java.version>1.8</java.version>
 
         <!-- library versions -->
-        <assertj-core.version>3.24.0</assertj-core.version>
+        <assertj-core.version>3.24.1</assertj-core.version>
         <errorprone.version>2.6.0</errorprone.version>
         <jmh.version>1.36</jmh.version>
         <junit.version>5.9.1</junit.version>
