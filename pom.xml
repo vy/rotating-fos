@@ -86,7 +86,7 @@
         <jmh.version>1.36</jmh.version>
         <junit.version>5.9.2</junit.version>
         <log4j.version>2.19.0</log4j.version>
-        <mockito.version>4.11.0</mockito.version>
+        <mockito.version>5.1.0</mockito.version>
         <slf4j.version>2.0.6</slf4j.version>
 
         <!-- plugin versions -->
