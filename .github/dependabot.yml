@@ -21,6 +21,10 @@ updates:
       interval: daily
       time: "04:00"
     open-pull-requests-limit: 10
+    ignore:
+      # Mockito 5 requires Java 11
+      - dependency-name: "org.mockito:*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
