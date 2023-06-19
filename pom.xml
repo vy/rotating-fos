@@ -82,7 +82,7 @@
 
         <!-- library versions -->
         <assertj-core.version>3.24.2</assertj-core.version>
-        <errorprone.version>2.19.1</errorprone.version>
+        <errorprone.version>2.20.0</errorprone.version>
         <jmh.version>1.36</jmh.version>
         <junit.version>5.9.3</junit.version>
         <log4j.version>2.20.0</log4j.version>
