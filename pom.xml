@@ -87,7 +87,7 @@
         <junit.version>5.10.0</junit.version>
         <log4j.version>2.20.0</log4j.version>
         <mockito.version>4.11.0</mockito.version>
-        <slf4j.version>2.0.7</slf4j.version>
+        <slf4j.version>2.0.9</slf4j.version>
 
         <!-- plugin versions -->
         <build-helper-maven-plugin.version>3.4.0</build-helper-maven-plugin.version>
