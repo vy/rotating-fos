@@ -39,7 +39,9 @@ You first need to include `rotating-fos` in your Maven/Gradle dependencies:
 
 `RotatingFileOutputStream` does not extend `java.io.FileOutputStream` (as a
 deliberate design decision, see [How (not) to extend standard collection
-classes](https://javachannel.org/posts/how-not-to-extend-standard-collection-classes/)),
+classes](https://javachannel.org/posts/how-not-to-extend-standard-collection-classes/)
+and [`FileInputStream`/`FileOutputStream` considered
+harmful](https://www.cloudbees.com/blog/fileinputstream-fileoutputstream-considered-harmful)),
 but `java.io.OutputStream`. Its basic usage is pretty straightforward:
 
 ```java
