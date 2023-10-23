@@ -31,9 +31,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -103,7 +105,9 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private ByteCountingOutputStream open(RotationPolicy policy, Instant instant) {
         try {
-            FileOutputStream fileOutputStream = new FileOutputStream(config.getFile(), config.isAppend());
+			OpenOption[] openOptions = { StandardOpenOption.CREATE,
+                    this.config.isAppend() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING };
+            OutputStream fileOutputStream = Files.newOutputStream(this.config.getFile().toPath(), openOptions);
             invokeCallbacks(callback -> callback.onOpen(policy, instant, fileOutputStream));
             long size = config.isAppend() ? readFileLength() : 0;
             return new ByteCountingOutputStream(fileOutputStream, size);
