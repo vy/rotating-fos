@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- Copyright 2018-2022 Volkan Yazıcı
+ Copyright 2018-2023 Volkan Yazıcı <volkan@yazi.ci>
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
     <name>RotatingFileOutputStream</name>
     <description>Sneakily rotating your FileOutputStream since 2017.</description>
     <url>https://github.com/vy/rotating-fos</url>
+    <inceptionYear>2017</inceptionYear>
 
     <licenses>
         <license>
@@ -42,7 +43,7 @@
             <name>Volkan Yazıcı</name>
             <email>volkan@yazi.ci</email>
             <organization>Volkan Yazıcı's Soap Co.</organization>
-            <organizationUrl>https://vlkan.com/</organizationUrl>
+            <organizationUrl>https://volkan.yazi.ci</organizationUrl>
             <roles>
                 <role>Project-Administrator</role>
                 <role>Developer</role>
@@ -74,7 +75,7 @@
     <properties>
 
         <!-- common properties -->
-        <revision>0.9.6-SNAPSHOT</revision>
+        <revision>0.9.6</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>

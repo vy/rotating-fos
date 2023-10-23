@@ -1,5 +1,5 @@
 <!---
- Copyright 2018-2022 Volkan Yazıcı
+ Copyright 2018-2023 Volkan Yazıcı <volkan@yazi.ci>
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  limitations under the License.
 -->
 
-### (????-??-??) v0.9.6
+### (2023-10-23) v0.9.6
 
 - Avoid using `FileInputStream`, since it requires a full-GC for clean-up. (#174, #175)
 
