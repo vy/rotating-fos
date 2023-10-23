@@ -105,12 +105,14 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
     private ByteCountingOutputStream open(RotationPolicy policy, Instant instant) {
         try {
-			OpenOption[] openOptions = { StandardOpenOption.CREATE,
-                    this.config.isAppend() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING };
-            OutputStream fileOutputStream = Files.newOutputStream(this.config.getFile().toPath(), openOptions);
-            invokeCallbacks(callback -> callback.onOpen(policy, instant, fileOutputStream));
+			OpenOption[] openOptions = {
+                    StandardOpenOption.CREATE,
+                    this.config.isAppend() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING
+            };
+            OutputStream outputStream = Files.newOutputStream(this.config.getFile().toPath(), openOptions);
+            invokeCallbacks(callback -> callback.onOpen(policy, instant, outputStream));
             long size = config.isAppend() ? readFileLength() : 0;
-            return new ByteCountingOutputStream(fileOutputStream, size);
+            return new ByteCountingOutputStream(outputStream, size);
         } catch (IOException error) {
             String message = String.format("file open failure {file=%s}", config.getFile());
             throw new RuntimeException(message, error);

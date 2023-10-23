@@ -175,6 +175,7 @@ methods.
   thread-safety improvements)
 - [Lukas Bradley](https://github.com/lukasbradley/)
 - [Liran Mendelovich](https://github.com/liran2000/) (rolling via `maxBackupCount`)
+- [Nicolas Clemeur](https://github.com/nclemeur) (avoiding `FileInputStream`)
 
 # License
 

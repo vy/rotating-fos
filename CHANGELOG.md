@@ -16,6 +16,8 @@
 
 ### (????-??-??) v0.9.6
 
+- Avoid using `FileInputStream`, since it requires a full-GC for clean-up. (#174, #175)
+
 ### (2022-06-02) v0.9.5
 
 - Guard against I/O failures while reading file length. (#70)
