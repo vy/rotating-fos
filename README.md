@@ -1,5 +1,5 @@
 <!---
- Copyright 2018-2023 Volkan Yazıcı <volkan@yazi.ci>
+ Copyright 2018-2024 Volkan Yazıcı <volkan@yazi.ci>
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -180,7 +180,7 @@ methods.
 
 # License
 
-Copyright &copy; 2018-2023 [Volkan Yazıcı](https://volkan.yazi.ci)
+Copyright &copy; 2018-2024 [Volkan Yazıcı](https://volkan.yazi.ci)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
