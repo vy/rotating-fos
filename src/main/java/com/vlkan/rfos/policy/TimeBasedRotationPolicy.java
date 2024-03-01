@@ -77,8 +77,8 @@ public abstract class TimeBasedRotationPolicy implements RotationPolicy {
             // This can happen due to:
             // 1. Code execution is faster than the time resolution provided by the clock
             // 2. Clocks can return a value twice (due to daylight time savings, monotonically-increasing design, etc.)
-            boolean uniqueTriggerInstant = lastTriggerInstant == null || triggerInstant.isAfter(lastTriggerInstant);
-            if (uniqueTriggerInstant) {
+            boolean validTriggerInstant = lastTriggerInstant == null || triggerInstant.isAfter(lastTriggerInstant);
+            if (validTriggerInstant) {
                 getLogger().debug("triggering {triggerInstant={}}", triggerInstant);
                 rotatable.rotate(TimeBasedRotationPolicy.this, triggerInstant);
             }
