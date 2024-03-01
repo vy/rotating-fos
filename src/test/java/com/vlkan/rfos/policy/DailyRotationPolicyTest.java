@@ -48,7 +48,7 @@ class DailyRotationPolicyTest {
                 .when(executorService.schedule(
                         Mockito.any(Runnable.class),
                         Mockito.anyLong(),
-                        Mockito.same(TimeUnit.MILLISECONDS)))
+                        Mockito.same(TimeUnit.NANOSECONDS)))
                 .thenAnswer(new Answer<ScheduledFuture<?>>() {
 
                     private int invocationCount = 0;
@@ -69,11 +69,11 @@ class DailyRotationPolicyTest {
         // Create the clock mock.
         Clock clock = Mockito.mock(Clock.class);
         Instant midnight1 = Instant.parse("2017-12-29T00:00:00.000Z");
-        long waitPeriod1Millis = 1_000;
-        Instant now1 = midnight1.minus(Duration.ofMillis(waitPeriod1Millis));
+        Duration waitPeriod1 = Duration.ofSeconds(1);
+        Instant now1 = midnight1.minus(waitPeriod1);
         Instant midnight2 = Instant.parse("2017-12-30T00:00:00.000Z");
-        long waitPeriod2Millis = 2_000;
-        Instant now2 = midnight2.minus(Duration.ofMillis(waitPeriod2Millis));
+        Duration waitPeriod2 = Duration.ofSeconds(2);
+        Instant now2 = midnight2.minus(waitPeriod2);
         Mockito
                 .when(clock.now())
                 .thenReturn(now1)
@@ -108,8 +108,8 @@ class DailyRotationPolicyTest {
                 .verify(executorService)
                 .schedule(
                         Mockito.any(Runnable.class),
-                        Mockito.eq(waitPeriod1Millis),
-                        Mockito.same(TimeUnit.MILLISECONDS));
+                        Mockito.eq(waitPeriod1.toNanos()),
+                        Mockito.same(TimeUnit.NANOSECONDS));
 
         // Verify the 1st rotation.
         Mockito
@@ -121,8 +121,8 @@ class DailyRotationPolicyTest {
                 .verify(executorService, Mockito.atLeastOnce())
                 .schedule(
                         Mockito.any(Runnable.class),
-                        Mockito.eq(waitPeriod2Millis),
-                        Mockito.same(TimeUnit.MILLISECONDS));
+                        Mockito.eq(waitPeriod2.toNanos()),
+                        Mockito.same(TimeUnit.NANOSECONDS));
 
         // Verify the 2nd rotation.
         Mockito

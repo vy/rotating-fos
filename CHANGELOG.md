@@ -14,6 +14,10 @@
  limitations under the License.
 -->
 
+### (????-??-??) v0.9.7
+
+- Fix repeated rotations in time-sensitive policies when time resolution is not good enough (#207)
+
 ### (2023-10-23) v0.9.6
 
 - Avoid using `FileInputStream`, since it requires a full-GC for clean-up. (#174, #175)

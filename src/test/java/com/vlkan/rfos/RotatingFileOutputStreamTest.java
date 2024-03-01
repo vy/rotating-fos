@@ -804,7 +804,7 @@ class RotatingFileOutputStreamTest {
                 .when(executorService.schedule(
                         Mockito.any(Runnable.class),
                         Mockito.anyLong(),
-                        Mockito.same(TimeUnit.MILLISECONDS)))
+                        Mockito.same(TimeUnit.NANOSECONDS)))
                 .thenAnswer((Answer<ScheduledFuture<?>>) invocationOnMock -> scheduledFuture);
         Mockito.when(executorService.toString()).thenReturn("MockedScheduledExecutorService");
 
@@ -835,7 +835,7 @@ class RotatingFileOutputStreamTest {
                 .schedule(
                         Mockito.any(Runnable.class),
                         Mockito.anyLong(),
-                        Mockito.same(TimeUnit.MILLISECONDS));
+                        Mockito.same(TimeUnit.NANOSECONDS));
 
         // Verify the task cancellation.
         inOrder

@@ -56,22 +56,33 @@ public abstract class TimeBasedRotationPolicy implements RotationPolicy {
 
     @Override
     public synchronized void start(Rotatable rotatable) {
+        start(rotatable, null);
+    }
+
+    private void start(Rotatable rotatable, Instant lastTriggerInstant) {
         RotationConfig config = rotatable.getConfig();
         Clock clock = config.getClock();
         Instant currentInstant = clock.now();
         Instant triggerInstant = getTriggerInstant(clock);
-        long triggerDelayMillis = Duration.between(currentInstant, triggerInstant).toMillis();
-        Runnable task = createTask(rotatable, triggerInstant);
+        long triggerDelayNanos = Duration.between(currentInstant, triggerInstant).toNanos();
+        Runnable task = createTask(rotatable, lastTriggerInstant, triggerInstant);
         this.scheduledFuture = config
                 .getExecutorService()
-                .schedule(task, triggerDelayMillis, TimeUnit.MILLISECONDS);
+                .schedule(task, triggerDelayNanos, TimeUnit.NANOSECONDS);
     }
 
-    private Runnable createTask(Rotatable rotatable, Instant triggerInstant) {
+    private Runnable createTask(Rotatable rotatable, Instant lastTriggerInstant, Instant triggerInstant) {
         return () -> {
-            getLogger().debug("triggering {triggerInstant={}}", triggerInstant);
-            rotatable.rotate(TimeBasedRotationPolicy.this, triggerInstant);
-            start(rotatable);
+            // Avoid triggering repeatedly for the very same instant.
+            // This can happen due to:
+            // 1. Code execution is faster than the time resolution provided by the clock
+            // 2. Clocks can return a value twice (due to daylight time savings, monotonically-increasing design, etc.)
+            boolean uniqueTriggerInstant = lastTriggerInstant == null || triggerInstant.isAfter(lastTriggerInstant);
+            if (uniqueTriggerInstant) {
+                getLogger().debug("triggering {triggerInstant={}}", triggerInstant);
+                rotatable.rotate(TimeBasedRotationPolicy.this, triggerInstant);
+            }
+            start(rotatable, triggerInstant);
         };
     }
 
