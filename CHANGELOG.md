@@ -14,7 +14,7 @@
  limitations under the License.
 -->
 
-### (????-??-??) v0.9.7
+### (2024-03-18) v0.9.7
 
 - Fix repeated rotations in time-sensitive policies when time resolution is not good enough (#207)
 
