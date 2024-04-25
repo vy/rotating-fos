@@ -70,19 +70,15 @@ public class SizeBasedRotationPolicy implements RotationPolicy {
     @Override
     public void acceptWrite(long byteCount) {
         if (byteCount > maxByteCount) {
-            Instant instant = rotatable.getConfig().getClock().now();
-            rotate(instant, byteCount, rotatable);
+            LOGGER.debug("triggering {byteCount={}}", byteCount);
+            final Instant instant = rotatable.getConfig().getClock().now();
+            rotatable.rotate(this, instant);
         }
     }
 
     @Override
     public void start(Rotatable rotatable) {
         this.rotatable = rotatable;
-    }
-
-    private void rotate(Instant instant, long byteCount, Rotatable rotatable) {
-        LOGGER.debug("triggering {byteCount={}}", byteCount);
-        rotatable.rotate(this, instant);
     }
 
     @Override
