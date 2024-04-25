@@ -29,7 +29,7 @@ public interface RotationPolicy {
      *
      * @param rotatable the rotatable accessing this policy
      */
-    void start(Rotatable rotatable);
+    default void start(Rotatable rotatable) {}
 
     /**
      * Stops the policy. That is, if it is a time-based policy, it can cancel
@@ -39,9 +39,11 @@ public interface RotationPolicy {
 
     /**
      * @return {@code true}, if the policy intercepts write operations via
-     * {@link #acceptWrite(long)} method
+     * {@code #acceptWrite()} methods
      */
-    boolean isWriteSensitive();
+    default boolean isWriteSensitive() {
+        return false;
+    }
 
     /**
      * Invoked before every write operation, if {@link #isWriteSensitive()}
@@ -50,6 +52,30 @@ public interface RotationPolicy {
      * @param byteCount the number of bytes written to the active file so far,
      *                  including the ones about to be written right now
      */
-    void acceptWrite(long byteCount);
+    default void acceptWrite(long byteCount) {}
+
+    /**
+     * Invoked before every {@link java.io.OutputStream#write(int)} operation,
+     * if {@link #isWriteSensitive()} returns {@code true}.
+     *
+     * @param b a byte
+     */
+    default void acceptWrite(int b) {}
+
+    /**
+     * Invoked before every {@link java.io.OutputStream#write(byte[], int, int)}
+     * operation, if {@link #isWriteSensitive()} returns {@code true}.
+     *
+     * @param b the byte array
+     */
+    default void acceptWrite(byte[] b) {}
+
+    /**
+     * Invoked before every write operation, if {@link #isWriteSensitive()}
+     * returns {@code true}.
+     *
+     * @param b the byte passed to {@link java.io.OutputStream#write(byte[], int, int)}
+     */
+    default void acceptWrite(byte[] b, int off, int len) {}
 
 }

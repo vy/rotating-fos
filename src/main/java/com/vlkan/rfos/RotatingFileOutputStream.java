@@ -24,12 +24,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -286,7 +284,7 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
 
         // Compress the file.
         LOGGER.debug("compressing {rotatedFile={}, compressedFile={}}", rotatedFile, compressedFile);
-        try (InputStream sourceStream = new FileInputStream(rotatedFile)) {
+        try (InputStream sourceStream = Files.newInputStream(rotatedFile.toPath())) {
             try (FileOutputStream targetStream = new FileOutputStream(compressedFile);
                  GZIPOutputStream gzipTargetStream = new GZIPOutputStream(targetStream)) {
                 copy(sourceStream, gzipTargetStream);
@@ -320,7 +318,14 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     public synchronized void write(int b) throws IOException {
         unsafeCheckStream();
         long byteCount = stream.size() + 1;
-        notifyWriteSensitivePolicies(byteCount);
+        // noinspection ForLoopReplaceableByForEach (avoid iterator instantion)
+        for (int writeSensitivePolicyIndex = 0;
+             writeSensitivePolicyIndex < writeSensitivePolicies.size();
+             writeSensitivePolicyIndex++) {
+            RotationPolicy writeSensitivePolicy = writeSensitivePolicies.get(writeSensitivePolicyIndex);
+            writeSensitivePolicy.acceptWrite(byteCount);
+            writeSensitivePolicy.acceptWrite(b);
+        }
         stream.write(b);
     }
 
@@ -328,7 +333,14 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     public synchronized void write(byte[] b) throws IOException {
         unsafeCheckStream();
         long byteCount = stream.size() + b.length;
-        notifyWriteSensitivePolicies(byteCount);
+        // noinspection ForLoopReplaceableByForEach (avoid iterator instantion)
+        for (int writeSensitivePolicyIndex = 0;
+             writeSensitivePolicyIndex < writeSensitivePolicies.size();
+             writeSensitivePolicyIndex++) {
+            RotationPolicy writeSensitivePolicy = writeSensitivePolicies.get(writeSensitivePolicyIndex);
+            writeSensitivePolicy.acceptWrite(byteCount);
+            writeSensitivePolicy.acceptWrite(b);
+        }
         stream.write(b);
     }
 
@@ -336,18 +348,15 @@ public class RotatingFileOutputStream extends OutputStream implements Rotatable 
     public synchronized void write(byte[] b, int off, int len) throws IOException {
         unsafeCheckStream();
         long byteCount = stream.size() + len;
-        notifyWriteSensitivePolicies(byteCount);
-        stream.write(b, off, len);
-    }
-
-    private void notifyWriteSensitivePolicies(long byteCount) {
         // noinspection ForLoopReplaceableByForEach (avoid iterator instantion)
         for (int writeSensitivePolicyIndex = 0;
              writeSensitivePolicyIndex < writeSensitivePolicies.size();
              writeSensitivePolicyIndex++) {
             RotationPolicy writeSensitivePolicy = writeSensitivePolicies.get(writeSensitivePolicyIndex);
             writeSensitivePolicy.acceptWrite(byteCount);
+            writeSensitivePolicy.acceptWrite(b, off, len);
         }
+        stream.write(b, off, len);
     }
 
     @Override

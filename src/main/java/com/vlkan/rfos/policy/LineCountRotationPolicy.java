@@ -1,0 +1,118 @@
+/*
+ * Copyright 2018-2024 Volkan Yazıcı <volkan@yazi.ci>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permits and
+ * limitations under the License.
+ */
+
+package com.vlkan.rfos.policy;
+
+import com.vlkan.rfos.Rotatable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Instant;
+import java.util.Objects;
+
+public class LineCountRotationPolicy implements RotationPolicy {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SizeBasedRotationPolicy.class);
+
+    private final int maxLineCount;
+
+    private long lineCount;
+
+    private Rotatable rotatable;
+
+    public LineCountRotationPolicy(int maxLineCount) {
+        if (maxLineCount < 1) {
+            String message = String.format("invalid count {maxLineCount=%d}", maxLineCount);
+            throw new IllegalArgumentException(message);
+        }
+        this.maxLineCount = maxLineCount;
+    }
+
+    @Override
+    public void start(Rotatable rotatable) {
+        this.rotatable = rotatable;
+        lineCount = 0;
+    }
+
+    /**
+     * @return {@code true}, always.
+     */
+    @Override
+    public boolean isWriteSensitive() {
+        return true;
+    }
+
+    @Override
+    public void acceptWrite(int b) {
+        if (b == '\n') {
+            ++lineCount;
+            rotateIfNecessary();
+        }
+    }
+
+    @Override
+    public void acceptWrite(byte[] buf) {
+        int matchCount = 0;
+        for (byte b : buf) {
+            if (b == '\n') {
+                ++matchCount;
+            }
+        }
+        lineCount += matchCount;
+        rotateIfNecessary();
+    }
+
+    @Override
+    public void acceptWrite(byte[] buf, int off, int len) {
+        int matchCount = 0;
+        int maxIdx = off + len;
+        for (int idx = off; idx < maxIdx; idx++) {
+            if (buf[idx] == '\n') {
+                ++matchCount;
+            }
+        }
+        lineCount += matchCount;
+        rotateIfNecessary();
+    }
+
+    private void rotateIfNecessary() {
+        if (lineCount >= maxLineCount) {
+            LOGGER.debug("triggering {lineCount={}}", lineCount);
+            Instant instant = rotatable.getConfig().getClock().now();
+            rotatable.rotate(this, instant);
+            lineCount = 0;
+        }
+    }
+
+    @Override
+    public boolean equals(Object instance) {
+        if (this == instance) return true;
+        if (instance == null || getClass() != instance.getClass()) return false;
+        LineCountRotationPolicy policy = (LineCountRotationPolicy) instance;
+        return maxLineCount == policy.maxLineCount;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(maxLineCount);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("LineCountRotationPolicy{maxLineCount=%d}", maxLineCount);
+    }
+
+}
