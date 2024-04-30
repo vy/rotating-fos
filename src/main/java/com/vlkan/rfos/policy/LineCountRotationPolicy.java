@@ -20,6 +20,10 @@ import com.vlkan.rfos.Rotatable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -44,7 +48,35 @@ public class LineCountRotationPolicy implements RotationPolicy {
     @Override
     public void start(Rotatable rotatable) {
         this.rotatable = rotatable;
-        lineCount = 0;
+        lineCount = countLines(rotatable.getConfig().getFile());
+        if (lineCount > 0) {
+            LOGGER.debug("starting with non-zero line count {lineCount={}}", lineCount);
+        }
+
+    }
+
+    private static long countLines(File file) {
+        // No need to check if file exists, since policies get started after opening the file.
+        final Path path = file.toPath();
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            long lineCount = 0;
+            byte[] buffer = new byte[8192];
+            for (;;) {
+                int length = inputStream.read(buffer);
+                if (length < 0) {
+                    break;
+                }
+                for (int i = 0; i < length; i++) {
+                    if (buffer[i] == '\n') {
+                        lineCount++;
+                    }
+                }
+            }
+            return lineCount;
+        } catch (Exception error) {
+            final String message = String.format("read failure {file=%s}", file);
+            throw new RuntimeException(message, error);
+        }
     }
 
     /**
