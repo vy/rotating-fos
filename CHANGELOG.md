@@ -14,7 +14,7 @@
  limitations under the License.
 -->
 
-### (2024-??-??) v0.10.0
+### (2024-05-06) v0.10.0
 
 - Add `ByteMatchingRotationPolicy` (#222)
 
