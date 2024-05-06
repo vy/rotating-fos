@@ -102,9 +102,12 @@ same `ScheduledExecutorService`. You can change the default pool size via
 Packaged rotation policies are listed below. (You can also create your own
 rotation policies by implementing `RotationPolicy` interface.)
 
-- `DailyRotationPolicy`
-- `WeeklyRotationPolicy`
-- `SizeBasedRotationPolicy`
+- Time-sensitive:
+  - `DailyRotationPolicy`
+  - `WeeklyRotationPolicy`
+- Byte-sensitive:
+  - `ByteMatchingRotationPolicy` (can be used to, e.g., rotate after every 1000 `\n` (newline) occurrences, etc.)
+  - `SizeBasedRotationPolicy`
 
 Once you have a handle on `RotatingFileOutputStream`, in addition to standard
 `java.io.OutputStream` methods (e.g., `write()`, `close()`, etc.), it provides
@@ -165,8 +168,17 @@ methods.
   times when a file is re-opened for append. Note that this is not a problem
   for files opened/closed via rotation.
 
+- **Byte-sensitive rotation policies can exceed given thresholds.**
+  They intercept `write(int[])`, `write(byte[])` calls of the output stream
+  and trigger when a certain condition holds. If you, say, use
+  `SizeBasedRotationPolicy` with `maxByteCount` configured to `3`,
+  and invoke `write(new byte[10])`, the rotation will be triggered once,
+  not more! Likewise, if you use `ByteMatchingRotationPolicy('.', 2)` and
+  invoke `write("1.2.3.4.5".getBytes())`, rotation will be triggered once.
+
 # Contributors
 
+- [Alen (alturkovic) Turkovic](https://github.com/alturkovic) (reviewing `ByteMatchingRotationPolicy` #222)
 - [Christoph (pitschr) Pitschmann](https://github.com/pitschr) (Windows-specific
   fixes, `RotationCallback#onOpen()` method, Java 9 module name, scheduler
   shutdown at exit)
