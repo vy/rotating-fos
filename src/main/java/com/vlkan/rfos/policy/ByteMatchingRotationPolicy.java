@@ -27,35 +27,38 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Objects;
 
-public class LineCountRotationPolicy implements RotationPolicy {
+public class ByteMatchingRotationPolicy implements RotationPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SizeBasedRotationPolicy.class);
 
-    private final int maxLineCount;
+    private final byte targetByte;
 
-    private long lineCount;
+    private final int maxOccurrenceCount;
+
+    private long occurrenceCount;
 
     private Rotatable rotatable;
 
-    public LineCountRotationPolicy(int maxLineCount) {
-        if (maxLineCount < 1) {
-            String message = String.format("invalid count {maxLineCount=%d}", maxLineCount);
+    public ByteMatchingRotationPolicy(byte targetByte, int maxOccurrenceCount) {
+        if (maxOccurrenceCount < 1) {
+            String message = String.format("invalid count {maxOccurrenceCount=%d}", maxOccurrenceCount);
             throw new IllegalArgumentException(message);
         }
-        this.maxLineCount = maxLineCount;
+        this.targetByte = targetByte;
+        this.maxOccurrenceCount = maxOccurrenceCount;
     }
 
     @Override
     public void start(Rotatable rotatable) {
         this.rotatable = rotatable;
-        lineCount = countLines(rotatable.getConfig().getFile());
-        if (lineCount > 0) {
-            LOGGER.debug("starting with non-zero line count {lineCount={}}", lineCount);
+        occurrenceCount = countOccurrences(rotatable.getConfig().getFile());
+        if (occurrenceCount > 0) {
+            LOGGER.debug("starting with non-zero line count {lineCount={}}", occurrenceCount);
         }
 
     }
 
-    private static long countLines(File file) {
+    private long countOccurrences(File file) {
         // No need to check if file exists, since policies get started after opening the file.
         final Path path = file.toPath();
         try (InputStream inputStream = Files.newInputStream(path)) {
@@ -67,7 +70,7 @@ public class LineCountRotationPolicy implements RotationPolicy {
                     break;
                 }
                 for (int i = 0; i < length; i++) {
-                    if (buffer[i] == '\n') {
+                    if (buffer[i] == targetByte) {
                         lineCount++;
                     }
                 }
@@ -89,8 +92,8 @@ public class LineCountRotationPolicy implements RotationPolicy {
 
     @Override
     public void acceptWrite(int b) {
-        if (b == '\n') {
-            ++lineCount;
+        if (b == targetByte) {
+            ++occurrenceCount;
             rotateIfNecessary();
         }
     }
@@ -99,11 +102,11 @@ public class LineCountRotationPolicy implements RotationPolicy {
     public void acceptWrite(byte[] buf) {
         int matchCount = 0;
         for (byte b : buf) {
-            if (b == '\n') {
+            if (b == targetByte) {
                 ++matchCount;
             }
         }
-        lineCount += matchCount;
+        occurrenceCount += matchCount;
         rotateIfNecessary();
     }
 
@@ -112,39 +115,43 @@ public class LineCountRotationPolicy implements RotationPolicy {
         int matchCount = 0;
         int maxIdx = off + len;
         for (int idx = off; idx < maxIdx; idx++) {
-            if (buf[idx] == '\n') {
+            if (buf[idx] == targetByte) {
                 ++matchCount;
             }
         }
-        lineCount += matchCount;
+        occurrenceCount += matchCount;
         rotateIfNecessary();
     }
 
     private void rotateIfNecessary() {
-        if (lineCount >= maxLineCount) {
-            LOGGER.debug("triggering {lineCount={}}", lineCount);
+        if (occurrenceCount >= maxOccurrenceCount) {
+            LOGGER.debug("triggering {occurrenceCount={}}", occurrenceCount);
             Instant instant = rotatable.getConfig().getClock().now();
             rotatable.rotate(this, instant);
-            lineCount = 0;
+            occurrenceCount = 0;
         }
     }
 
     @Override
     public boolean equals(Object instance) {
         if (this == instance) return true;
-        if (instance == null || getClass() != instance.getClass()) return false;
-        LineCountRotationPolicy policy = (LineCountRotationPolicy) instance;
-        return maxLineCount == policy.maxLineCount;
+        if (instance == null || getClass() != instance.getClass()) {
+            return false;
+        }
+        ByteMatchingRotationPolicy policy = (ByteMatchingRotationPolicy) instance;
+        return maxOccurrenceCount == policy.maxOccurrenceCount;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(maxLineCount);
+        return Objects.hash(maxOccurrenceCount);
     }
 
     @Override
     public String toString() {
-        return String.format("LineCountRotationPolicy{maxLineCount=%d}", maxLineCount);
+        return String.format(
+                "ByteMatchingRotationPolicy{targetByte=0x%X, maxOccurrenceCount=%d}",
+                targetByte, maxOccurrenceCount);
     }
 
 }

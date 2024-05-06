@@ -33,26 +33,26 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 
-class LineCountRotationPolicyTest {
+class ByteMatchingRotationPolicyTest {
 
     @Test
-    void test_invalid_maxLineCount() {
-        for (int invalidMaxLineCount : new int[] {-1, 0}) {
+    void test_invalid_maxOccurrenceCount() {
+        for (int invalidMaxOccurrenceCount : new int[] {-1, 0}) {
             Assertions
-                    .assertThatThrownBy(() -> new LineCountRotationPolicy(invalidMaxLineCount))
+                    .assertThatThrownBy(() -> new ByteMatchingRotationPolicy((byte) '.', invalidMaxOccurrenceCount))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("invalid count");
         }
     }
 
     @Test
-    void test_maxLineCount_1(@TempDir(cleanup = CleanupMode.ON_SUCCESS) Path tempDir) throws IOException {
+    void test_maxOccurrenceCount_1(@TempDir(cleanup = CleanupMode.ON_SUCCESS) Path tempDir) throws IOException {
 
         // Create a non-empty initial file
         final Path tempFilePath = tempDir.resolve("test.log");
         Files.write(
                 tempFilePath,
-                new byte[]{'a', '\n'},
+                new byte[]{'a', '.'},
                 StandardOpenOption.CREATE_NEW,
                 StandardOpenOption.TRUNCATE_EXISTING);
 
@@ -66,7 +66,7 @@ class LineCountRotationPolicyTest {
         Mockito.when(rotatable.getConfig()).thenReturn(rotationConfig);
 
         // Create and start the policy
-        LineCountRotationPolicy policy = new LineCountRotationPolicy(1);
+        ByteMatchingRotationPolicy policy = new ByteMatchingRotationPolicy((byte) '.', 1);
         policy.start(rotatable);
 
         // Verify the `Rotatable` in order
@@ -74,20 +74,20 @@ class LineCountRotationPolicyTest {
 
         // Test `acceptWrite(int)`
         policy.acceptWrite('b');
-        policy.acceptWrite('\n');
+        policy.acceptWrite('.');
         inOrder.verify(rotatable).rotate(Mockito.same(policy), Mockito.any());
         policy.acceptWrite('c');
-        policy.acceptWrite('\n');
+        policy.acceptWrite('.');
         inOrder.verify(rotatable).rotate(Mockito.same(policy), Mockito.any());
         policy.acceptWrite('d');
         inOrder.verify(rotatable, Mockito.never()).rotate(Mockito.same(policy), Mockito.any());
 
         // Test `acceptWrite(byte[])`
-        policy.acceptWrite("b\nc\nd".getBytes(StandardCharsets.US_ASCII));
+        policy.acceptWrite("e.f.g".getBytes(StandardCharsets.US_ASCII));
         inOrder.verify(rotatable).rotate(Mockito.same(policy), Mockito.any());
 
         // Test `acceptWrite(byte[],int,int)`
-        policy.acceptWrite(("\n\n" + "b\nc\nd" + "\n\n").getBytes(StandardCharsets.US_ASCII), 2, 5);
+        policy.acceptWrite((".." + "h.i.j" + "..").getBytes(StandardCharsets.US_ASCII), 2, 5);
         inOrder.verify(rotatable).rotate(Mockito.same(policy), Mockito.any());
 
     }
