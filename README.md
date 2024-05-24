@@ -176,6 +176,10 @@ methods.
   not more! Likewise, if you use `ByteMatchingRotationPolicy('.', 2)` and
   invoke `write("1.2.3.4.5".getBytes())`, rotation will be triggered once.
 
+# Security policy
+
+If you have encountered an unlisted security vulnerability or other unexpected behaviour that has security impact, please report them privately to the [volkan@yazi.ci](mailto:volkan@yazi.ci) email address.
+
 # Contributors
 
 - [Alen (alturkovic) Turkovic](https://github.com/alturkovic) (reviewing `ByteMatchingRotationPolicy` #222)
