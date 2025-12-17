@@ -86,7 +86,7 @@
         <errorprone.version>2.45.0</errorprone.version>
         <jmh.version>1.37</jmh.version>
         <junit.version>5.13.4</junit.version>
-        <log4j.version>2.25.2</log4j.version>
+        <log4j.version>2.25.3</log4j.version>
         <mockito.version>4.11.0</mockito.version>
         <slf4j.version>2.0.17</slf4j.version>
 
